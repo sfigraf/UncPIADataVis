@@ -1,9 +1,10 @@
 #get USGS data
-
+# codeID = "09147025"
+# startDate = "2025-08-01"
 getDailyand15MinUSGSData <- function(codeID, startDate = "2020-08-06", endDate = Sys.Date(), waterTemp = TRUE) {
   ##windy gap/hitching post 
   #reading in USGS data with upt to date data
-  USGSDataDaily <- read_waterdata_daily(monitoring_location_id = paste0("USGS-", codeID),
+  USGSDataDaily <- read_waterdata_daily(monitoring_location_id = paste0("USGS-", as.character(codeID)),
                                         parameter_code = c("00060", "00010"), #this is parameter codes for discharge and celsius water temp; more can be added if needed. https://help.waterdata.usgs.gov/codes-and-parameters/parameters
                                         time = c(startDate, endDate)
   )
