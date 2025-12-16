@@ -6,36 +6,53 @@ library(leaflet) #for map
 library(sf)
 library(plotly)
 library(shinydashboard) #for box()
+library(readxl)
 
-antennaMetadata <- read_csv("data/antennaMetadata.csv")
+antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
+detections <- read_csv("data/detections_20251216.csv")
 
-antennasSF <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326)
+antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
+antennasSF <- antennasSFAll %>%
+  distinct(geometry, .keep_all = TRUE)
 
-neededFunctions <- c("getDailyand15MinUSGSData.R")
-
-USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = "2025-08-01", waterTemp = FALSE)
-
-for (i in neededFunctions) {
-  source(paste0("./functions/",i))
-}
 
 for (i in list.files("./modules/")) {
   if (grepl(".R", i)) {
     source(paste0("./modules/",i))
   }
 }
+neededFunctions <- c("getDailyand15MinUSGSData.R")
+
+for (i in neededFunctions) {
+  source(paste0("./functions/",i))
+}
+
+
+
+USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
+
+###Data Wrangling
+
+detectionsSF <- detections %>%
+  left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
+  )) %>%
+  st_as_sf()
+
+
+dailyDetectionData <- detectionsSF %>%
+  count(Date = date(detected), antennaName)
+  
 
 ui <- fluidPage(
   navbarPage(title = "Uncompahgre Data Exploration",
              id = "tabs", 
              theme = shinytheme("sandstone"), #end of navbar page arguments; what follow is all inside it
-             
-             tabPanel("Map",
-                      map_UI("map")
-             ), 
              tabPanel("Discharge and Detections", 
                       environmentalData_UI("environmentalData")
-                      )
+                      ), 
+             tabPanel("Map",
+                      map_UI("map")
+             )
   )
 )
 
@@ -43,8 +60,9 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    map_Server("map", antennasSF)
-    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily)
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, dailyDetectionData)
+    map_Server("map", antennasSF, detectionsSF)
+    
   })
 
   

@@ -14,7 +14,7 @@ environmentalData_UI <- function(id) {
     )
 }
 
-environmentalData_Server <- function(id, USGSData) {
+environmentalData_Server <- function(id, USGSData, detectionData) {
   moduleServer(
     id,
     function(input, output, session) {
@@ -56,13 +56,13 @@ environmentalData_Server <- function(id, USGSData) {
                     mode = "lines"
                     #colors = allColors
           ) %>%
-          # add_trace(data = filteredMovementsDataCounts(), x = ~Date, y = ~numberOfActivities,
-          #           yaxis = movYaxis,
-          #           color = ~movement_only, 
-          #           colors = allColors,
-          #           hoverinfo = "text",
-          #           text = ~paste('Date: ', as.character(Date), '<br>Number of Activities: ', numberOfActivities),
-          #           type = 'bar') %>%
+          add_trace(data = detectionData, x = ~Date, y = ~n,
+                    yaxis = movYaxis,
+                    color = ~antennaName,
+                    #colors = allColors,
+                    hoverinfo = "text",
+                    text = ~paste('Date: ', as.character(Date), '<br>Number of Detections: ', n),
+                    type = 'bar') %>%
           layout(legend = list(x = 1.05, y = 1),
                  barmode = "overlay",
                  xaxis = list(title = "Date"),

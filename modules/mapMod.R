@@ -8,12 +8,12 @@ map_UI <- function(id) {
   )
 }
 
-map_Server <- function(id, antennas) {
+map_Server <- function(id, antennasSF, detectionsSF) {
   moduleServer(
     id,
     function(input, output, session) {
       output$map <- renderLeaflet({
-        centerCoords <- st_coordinates(st_centroid(st_union(antennas)))
+        centerCoords <- st_coordinates(st_centroid(st_union(antennasSF)))
         
         leaflet() %>%
           addProviderTiles(providers$Esri.WorldImagery,
@@ -22,15 +22,29 @@ map_Server <- function(id, antennas) {
           ) %>%
           setView(lng = centerCoords[1], lat = centerCoords[2], zoom = 19) %>%
           addAwesomeMarkers(
-            data = antennas,
+            data = antennasSF,
+            group = "Antennas",
+            #clusterOptions = markerClusterOptions(),
+            icon = icons(),
+            label = paste(antennasSF$antennaName, "\n"),
+            #layerId = as.character(filtered_movements_data()$id),
+            popup = paste(
+              "Antenna Name:", antennasSF$antennaName)
+          ) %>%
+          addAwesomeMarkers(
+            data = detectionsSF,
             group = "Detections",
             #clusterOptions = markerClusterOptions(),
             icon = icons(),
-            label = paste(antennas$antenna, "\n"),
+            label = paste(detectionsSF$antenna, "\n"),
             #layerId = as.character(filtered_movements_data()$id),
             popup = paste(
-              "Antenna Name:", antennas$antenna)
-          )
+              "Antenna Name:", detectionsSF$antenna)
+          ) %>%
+          addLayersControl(overlayGroups = c("Detections", "Antennas"), 
+                           baseGroups = c("Satellite")
+          ) %>%
+          hideGroup(c("Detections"))
       })
       
     }
