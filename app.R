@@ -5,6 +5,10 @@ library(dataRetrieval) #for USGS
 library(leaflet) #for map
 library(sf)
 
+antennaMetadata <- read_csv("data/antennaMetadata.csv")
+
+antennasSF <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326)
+
 neededFunctions <- c("getDailyand15MinUSGSData.R")
 
 for (i in neededFunctions) {
@@ -33,7 +37,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    map_Server("map")
+    map_Server("map", antennasSF)
   })
 
   
