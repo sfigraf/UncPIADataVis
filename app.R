@@ -41,6 +41,18 @@ detectionsSF <- detections %>%
 
 dailyDetectionData <- detectionsSF %>%
   count(Date = date(detected), antennaName)
+
+x <- detectionsSF %>%
+  group_by(tag) %>%
+  arrange(detected) %>%
+  #filter(tag == "3DD.0078E38638") %>%
+  mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
+                              str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
+                              antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+                              antennaName == lag(antennaName) ~ "No Movement",
+                              TRUE ~ NA
+                              )
+                              )
   
 
 ui <- fluidPage(

@@ -3,7 +3,7 @@
 map_UI <- function(id) {
   ns <- NS(id)
   tagList(
-    leafletOutput(ns("map"))
+    leafletOutput(ns("map"), height = "700px")
   
   )
 }
@@ -31,20 +31,20 @@ map_Server <- function(id, antennasSF, detectionsSF) {
             popup = paste(
               "Antenna Name:", antennasSF$antennaName)
           ) %>%
-          addAwesomeMarkers(
-            data = detectionsSF,
-            group = "Detections",
-            #clusterOptions = markerClusterOptions(),
-            icon = icons(),
-            label = paste(detectionsSF$antenna, "\n"),
-            #layerId = as.character(filtered_movements_data()$id),
-            popup = paste(
-              "Antenna Name:", detectionsSF$antenna)
-          ) %>%
-          addLayersControl(overlayGroups = c("Detections", "Antennas"), 
+          # addAwesomeMarkers(
+          #   data = detectionsSF,
+          #   group = "Detections",
+          #   #clusterOptions = markerClusterOptions(),
+          #   icon = icons(),
+          #   label = paste(detectionsSF$antenna, "\n"),
+          #   #layerId = as.character(filtered_movements_data()$id),
+          #   popup = paste(
+          #     "Antenna Name:", detectionsSF$antenna)
+          # ) %>%
+          addLayersControl(overlayGroups = c("Detections"), #, "Antennas"
                            baseGroups = c("Satellite")
-          ) %>%
-          hideGroup(c("Detections"))
+          ) #%>%
+         # hideGroup(c("Detections"))
       })
       
     }

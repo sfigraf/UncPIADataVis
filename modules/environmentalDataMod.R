@@ -2,16 +2,22 @@
 environmentalData_UI <- function(id) {
   ns <- NS(id)
   tagList(
-    shinydashboard::box(title = "Detections and Discharge",
-        width = 12,
-        plotlyOutput(ns("OverlayPlot")), 
-        radioButtons(ns("YaxisSelect"), 
-                     "Primary Y Axis Data",
-                     choices = c("Detections", 
-                                 "Discharge"),
-                     selected = "Detections")
+    sidebarLayout(
+      sidebarPanel(radioButtons(ns("YaxisSelect"), 
+                                "Primary Y Axis Data",
+                                choices = c("Detections", 
+                                            "Discharge"),
+                                selected = "Detections")
+      ), 
+      mainPanel(shinydashboard::box(title = "Detections and Discharge",
+                                    width = 12, 
+                                    plotlyOutput(ns("OverlayPlot"))
+                                    
+      )
+      )
     )
-    )
+    
+  )
 }
 
 environmentalData_Server <- function(id, USGSData, detectionData) {
