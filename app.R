@@ -9,7 +9,9 @@ library(shinydashboard) #for box()
 library(readxl)
 
 antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
-detections <- read_csv("data/detections_20251216.csv")
+detections <- read_excel("data/detections_20251216.xlsx", 
+                         col_types = c("text", "text", "date", 
+              "numeric", "text", "numeric"))
 
 antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
 antennasSF <- antennasSFAll %>%
@@ -43,9 +45,9 @@ dailyDetectionData <- detectionsSF %>%
   count(Date = date(detected), antennaName)
 
 x <- detectionsSF %>%
-  group_by(tag) %>%
+  group_by(dec_tag) %>%
   arrange(detected) %>%
-  #filter(tag == "3DD.0078E38638") %>%
+  #filter(dec_tag == "3DD.0078E38638") %>%
   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
