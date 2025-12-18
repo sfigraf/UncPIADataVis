@@ -7,11 +7,20 @@ library(sf)
 library(plotly)
 library(shinydashboard) #for box()
 library(readxl)
+library(shinycssloaders) #withSpinner
+library(DT)
 
 antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
+#detections_20251216 <- read_csv("data/detections_20251216.csv")
 detections <- read_excel("data/detections_20251216.xlsx", 
                          col_types = c("text", "text", "date", 
               "numeric", "text", "numeric"))
+Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
+                               col_types = c("date", "text", "numeric", 
+                                             "text", "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric"))
 
 antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
 antennasSF <- antennasSFAll %>%
@@ -35,11 +44,19 @@ USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detection
 
 ###Data Wrangling
 
-detectionsSF <- detections %>%
+Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
+  select(Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
+
+detections1 <- detections %>%
+  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
+
+detectionsSF <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
+  left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Full Tag")) %>%
   st_as_sf()
 
+str_length("989.00103062026096")
 
 dailyDetectionData <- detectionsSF %>%
   count(Date = date(detected), antennaName)

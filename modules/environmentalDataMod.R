@@ -11,7 +11,8 @@ environmentalData_UI <- function(id) {
       ), 
       mainPanel(shinydashboard::box(title = "Detections and Discharge",
                                     width = 12, 
-                                    plotlyOutput(ns("OverlayPlot"))
+                                    plotlyOutput(ns("OverlayPlot")), 
+                                    withSpinner(DT::DTOutput(ns("detectionDataTable"))),
                                     
       )
       )
@@ -24,6 +25,8 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
   moduleServer(
     id,
     function(input, output, session) {
+      
+      
       output$OverlayPlot <- renderPlotly({
         
         # if(!input$variableSelect2 %in% c("USGSDischarge", "USGSWatertemp")){
@@ -75,6 +78,20 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                  yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
                  yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
                                showgrid = FALSE))
+      })
+      
+      output$detectionDataTable <- renderDT({
+        datatable(detectionData,
+                  rownames = FALSE,
+                  extensions = c('Buttons'),
+                  #for slider filter instead of text input
+                  filter = 'top',
+                  options = list(
+                    pageLength = 10, info = TRUE, lengthMenu = list(c(10,25, 50, 100, 200), c("10", "25", "50","100","200")),
+                    dom = 'lfrtip', #had to add 'lowercase L' letter to display the page length again #errorin list: arg 5 is empty because I had a comma after the dom argument so it thought there was gonna be another argument input
+                    language = list(emptyTable = "Enter inputs and press Render Table")
+                  )
+        )
       })
     }
   )

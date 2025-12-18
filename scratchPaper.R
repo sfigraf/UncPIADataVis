@@ -9,13 +9,42 @@ fitBounds(antennaMetadata$long[1], antennaMetadata$lat[1], antennaMetadata$long[
 leaflet(detectionsSF) %>%
   addTiles() %>%
   addAwesomeMarkers()
+################
+# in this one there is 989.00103062018604
+uniqueDetected <- sort(unique(detections$dec_tag))
+# in this one there is 989.001030620186
+uniqueReleased <- unique(Unc_Tag_Releases1$`Full Tag`)
+
+detections1 <- detections %>%
+  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
+detectionsSF <- detections1 %>%
+  left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
+  )) %>%
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+  st_as_sf()
+
+NAs <- detectionsSF %>%
+  st_drop_geometry() %>%
+  filter(is.na(SPP)) %>%
+  distinct(newTag, .keep_all = TRUE)
+
+Unc_Tag_Releases2 <- Unc_Tag_Releases1 %>%
+  mutate(numDigits = str_length(`Full Tag`)) %>%
+  count(numDigits)
+detectionsSFSumarized <- detectionsSF %>%
+  st_drop_geometry() %>%
+  mutate(numDigits = str_length(`dec_tag`)) %>%
+  distinct(dec_tag, .keep_all = TRUE) %>%
+  count(numDigits)
+
+
 #########
 detectionsSF <- detections %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
   st_as_sf()
 detectionsFIrstLast <- detectionsSF %>%
-  group_by(tag, date(detected)) %>%
+  group_by(dec_tag, date(detected)) %>%
   arrange(detected) %>%
   mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
                                 detected == max(detected) ~ "Last_of_day",
@@ -23,9 +52,9 @@ detectionsFIrstLast <- detectionsSF %>%
   ungroup()
 
 dailyMovementsTableAll <- detectionsFIrstLast %>%
-  group_by(tag) %>%
+  group_by(dec_tag) %>%
   arrange(detected) %>%
-  #filter(tag == "3DD.0078E38638") %>% 0078E385C1
+  #filter(dec_tag == "3DD.0078E38638") %>% 0078E385C1
   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
@@ -38,16 +67,16 @@ dailyMovementsTableAll <- detectionsFIrstLast %>%
   st_drop_geometry()
 
 dailyMovementsTablemoveOnly <- dailyMovementsTableAll %>%
-  distinct(Date, tag, antennaName, movement, .keep_all = TRUE)
+  distinct(Date, dec_tag, antennaName, movement, .keep_all = TRUE)
 dailyMovementsTablemoveFirstLastMovement <- dailyMovementsTableAll %>%
-  distinct(Date, tag, antennaName, first_last, movement, .keep_all = TRUE)
+  distinct(Date, dec_tag, antennaName, first_last, movement, .keep_all = TRUE)
 
 dailyMovementsTablemoveFirstLast <- dailyMovementsTableAll %>%
   #separate to main array and cow creek
   mutate(array = if_else(antennaName %in% c("Uncompahgre River Antenna Downstream", "Uncompahgre River Antenna Upstream"), "Main Array", "Cow Creek")) %>%
   #remove detections during the day ebtween the first and last detections
   filter(first_last != "0") %>%
-  distinct(Date, tag, array, first_last, .keep_all = TRUE)
+  distinct(Date, dec_tag, array, first_last, .keep_all = TRUE)
 
 x <- dailyMovementsTablemoveFirstLast %>%
   anti_join(dailyMovementsTablemoveOnly)
