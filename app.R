@@ -49,11 +49,10 @@ Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
 
 detections1 <- detections %>%
   mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
-
 detectionsSF <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
-  left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Full Tag")) %>%
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
   st_as_sf()
 
 NAs <- detectionsSF %>%
