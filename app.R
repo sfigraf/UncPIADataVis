@@ -9,6 +9,7 @@ library(shinydashboard) #for box()
 library(readxl)
 library(shinycssloaders) #withSpinner
 library(DT)
+library(shinyWidgets) # for pickerInputs
 
 antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
 #detections_20251216 <- read_csv("data/detections_20251216.csv")
@@ -55,9 +56,14 @@ detectionsSF <- detections1 %>%
   left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
   st_as_sf()
 
-NAs <- detectionsSF %>%
+NARaw <- detectionsSF %>%
   st_drop_geometry() %>%
-  filter(is.na(SPP)) %>%
+  filter(is.na(SPP)) 
+
+NACounts <- NARaw %>%
+  count(newTag)
+
+NAs <- NARaw %>%
   distinct(newTag, .keep_all = TRUE)
 #str_length("989.00103062026096")
 
@@ -84,7 +90,7 @@ ui <- fluidPage(
              id = "tabs", 
              theme = shinytheme("sandstone"), #end of navbar page arguments; what follow is all inside it
              tabPanel("Discharge and Detections", 
-                      environmentalData_UI("environmentalData")
+                      environmentalData_UI("environmentalData", detectionsSF)
                       ), 
              tabPanel("Map",
                       map_UI("map")
@@ -96,7 +102,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, dailyDetectionData)
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsSF)
     map_Server("map", antennasSF, detectionsSF)
     
   })

@@ -80,3 +80,16 @@ dailyMovementsTablemoveFirstLast <- dailyMovementsTableAll %>%
 
 x <- dailyMovementsTablemoveFirstLast %>%
   anti_join(dailyMovementsTablemoveOnly)
+
+######filters 
+detectionData <- detectionsSF
+detectionDatafiltered <- detectionData  %>% 
+  filter(
+    Date >= "2025-11-11" & Date <= "2025-12-16"),
+    antennaName %in% c(input$arrayPicker),
+    antenna %in% c(input$picker7),
+    SPP %in% c(input$picker10),
+    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+    
+  ) %>%
+  arrange(detected)
