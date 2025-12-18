@@ -56,23 +56,29 @@ detectionsSF <- detections1 %>%
   left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Full Tag")) %>%
   st_as_sf()
 
-str_length("989.00103062026096")
+NAs <- detectionsSF %>%
+  st_drop_geometry() %>%
+  filter(is.na(SPP)) %>%
+  distinct(newTag, .keep_all = TRUE)
+#str_length("989.00103062026096")
 
 dailyDetectionData <- detectionsSF %>%
   count(Date = date(detected), antennaName)
+##########MOVEMENTS
 
-x <- detectionsSF %>%
-  group_by(dec_tag) %>%
-  arrange(detected) %>%
-  #filter(dec_tag == "3DD.0078E38638") %>%
-  mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
-                              str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
-                              antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
-                              antennaName == lag(antennaName) ~ "No Movement",
-                              TRUE ~ NA
-                              )
-                              )
-  
+
+# x <- detectionsSF %>%
+#   group_by(dec_tag) %>%
+#   arrange(detected) %>%
+#   #filter(dec_tag == "3DD.0078E38638") %>%
+#   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
+#                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
+#                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+#                               antennaName == lag(antennaName) ~ "No Movement",
+#                               TRUE ~ NA
+#                               )
+#                               )
+#   
 
 ui <- fluidPage(
   navbarPage(title = "Uncompahgre Data Exploration",
