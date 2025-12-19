@@ -33,7 +33,7 @@ for (i in list.files("./modules/")) {
     source(paste0("./modules/",i))
   }
 }
-neededFunctions <- c("getDailyand15MinUSGSData.R")
+neededFunctions <- c("getDailyand15MinUSGSData.R", "getMovementsFunction.R")
 
 for (i in neededFunctions) {
   source(paste0("./functions/",i))
@@ -46,33 +46,35 @@ USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detection
 ###Data Wrangling
 
 Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
-  select(Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
+  select(`Release Date` = Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
 
 detections1 <- detections %>%
   mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
-detectionsSF <- detections1 %>%
+detectionsAttributesFlows <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
   left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
-  st_as_sf()
+  mutate(DetectionDate = date(detected)) %>%
+  left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
+  #st_as_sf()
 
-NARaw <- detectionsSF %>%
-  st_drop_geometry() %>%
-  filter(is.na(SPP)) 
-
-NACounts <- NARaw %>%
-  count(newTag)
-
-NAs <- NARaw %>%
-  distinct(newTag, .keep_all = TRUE)
+# NARaw <- detectionsAttributesFlows %>%
+#   st_drop_geometry() %>%
+#   filter(is.na(SPP)) 
+# 
+# NACounts <- NARaw %>%
+#   count(newTag)
+# 
+# NAs <- NARaw %>%
+#   distinct(newTag, .keep_all = TRUE)
 #str_length("989.00103062026096")
 
-dailyDetectionData <- detectionsSF %>%
-  count(Date = date(detected), antennaName)
+# dailyDetectionData <- detectionsAttributesFlows %>%
+#   count(Date = date(detected), antennaName)
 ##########MOVEMENTS
 
 
-# x <- detectionsSF %>%
+# x <- detectionsAttributesFlows %>%
 #   group_by(dec_tag) %>%
 #   arrange(detected) %>%
 #   #filter(dec_tag == "3DD.0078E38638") %>%
@@ -88,9 +90,9 @@ dailyDetectionData <- detectionsSF %>%
 ui <- fluidPage(
   navbarPage(title = "Uncompahgre Data Exploration",
              id = "tabs", 
-             theme = shinytheme("sandstone"), #end of navbar page arguments; what follow is all inside it
+             theme = shinytheme("journal"), #end of navbar page arguments; what follow is all inside it
              tabPanel("Discharge and Detections", 
-                      environmentalData_UI("environmentalData", detectionsSF)
+                      environmentalData_UI("environmentalData", detectionsAttributesFlows)
                       ), 
              tabPanel("Map",
                       map_UI("map")
@@ -102,8 +104,8 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsSF)
-    map_Server("map", antennasSF, detectionsSF)
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsAttributesFlows)
+    map_Server("map", antennasSF, detectionsAttributesFlows)
     
   })
 

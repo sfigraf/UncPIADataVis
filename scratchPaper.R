@@ -39,10 +39,11 @@ detectionsSFSumarized <- detectionsSF %>%
 
 
 #########
-detectionsSF <- detections %>%
+detectionsSF <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
-  st_as_sf()
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) 
+
 detectionsFIrstLast <- detectionsSF %>%
   group_by(dec_tag, date(detected)) %>%
   arrange(detected) %>%
@@ -54,17 +55,18 @@ detectionsFIrstLast <- detectionsSF %>%
 dailyMovementsTableAll <- detectionsFIrstLast %>%
   group_by(dec_tag) %>%
   arrange(detected) %>%
+  #989.002028176951
   #filter(dec_tag == "3DD.0078E38638") %>% 0078E385C1
   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
                               antennaName == lag(antennaName) ~ "No Movement",
                               TRUE ~ NA), 
-         Date = date(detected), 
-         long = st_coordinates(detectionsSF)[row_number(),1], 
-         lat = st_coordinates(detectionsSF)[row_number(),2]
-  ) %>%
-  st_drop_geometry()
+         detectionDate = date(detected)
+         # long = st_coordinates(detectionsSF)[row_number(),1], 
+         # lat = st_coordinates(detectionsSF)[row_number(),2]
+  ) #%>%
+  #st_drop_geometry()
 
 dailyMovementsTablemoveOnly <- dailyMovementsTableAll %>%
   distinct(Date, dec_tag, antennaName, movement, .keep_all = TRUE)
@@ -82,14 +84,63 @@ x <- dailyMovementsTablemoveFirstLast %>%
   anti_join(dailyMovementsTablemoveOnly)
 
 ######filters 
-detectionData <- detectionsSF
-detectionDatafiltered <- detectionData  %>% 
-  filter(
-    Date >= "2025-11-11" & Date <= "2025-12-16"),
-    antennaName %in% c(input$arrayPicker),
-    antenna %in% c(input$picker7),
-    SPP %in% c(input$picker10),
-    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
-    
-  ) %>%
-  arrange(detected)
+# detectionData <- detectionsSF
+# detectionDatafiltered <- detectionData  %>% 
+#   filter(
+#     Date >= "2025-11-11" & Date <= "2025-12-16"),
+#     antennaName %in% c(input$arrayPicker),
+#     antenna %in% c(input$picker7),
+#     SPP %in% c(input$picker10),
+#     `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+#     
+#   ) %>%
+#   arrange(detected)
+
+###greaphing 
+
+dailyMovementsTablemoveFirstLast <- getMovementsFunction(detectionsAttributesFlows)
+
+movementCounts <- dailyMovementsTablemoveFirstLast %>%
+  count(movement, DetectionDate)
+
+line_color = I("#87CEEB")
+nameOfLine = "USGS Discharge"
+input <- list("YaxisSelect" = "Detections" )
+
+if(input$YaxisSelect == "Detections"){
+  movYaxis = "y1"
+  envYaxis = "y2"
+  primaryYaxisName = "Detection Data (Daily Counts)"
+  SecondaryYaxisName = "Discharge"
+  
+} else{
+  movYaxis = "y2"
+  envYaxis = "y1"
+  primaryYaxisName = "Discharge"
+  SecondaryYaxisName = "Detection Data (Daily Counts)"
+}
+
+plot_ly() %>%
+  # add_trace(data = dailyMovementsTablemoveFirstLast, x = ~DetectionDate,
+  #           y = ~Flow,
+  #           name = nameOfLine,
+  #           color = line_color, 
+  #           type = "scatter",
+  #           yaxis = envYaxis,
+  #           connectgaps = TRUE,
+  #           mode = "lines"
+  #           #colors = allColors
+  # ) %>%
+  add_trace(data = movementCounts, x = ~DetectionDate, y = ~n,
+            yaxis = movYaxis,
+            color = ~movement,
+            #colors = allColors,
+            hoverinfo = "text",
+            text = ~paste('Date: ', as.character(DetectionDate), '<br>Number of movements: ', n),
+            type = 'bar') %>%
+  layout(legend = list(x = 1.05, y = 1),
+         barmode = "overlay",
+         xaxis = list(title = "Date"),
+         yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
+         yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
+                       showgrid = FALSE))

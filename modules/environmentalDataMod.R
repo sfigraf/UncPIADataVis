@@ -3,57 +3,75 @@ environmentalData_UI <- function(id, detectionData) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
-      sidebarPanel(
-        textInput(ns("textinput3"), label = "Filter by Tag"),
-        sliderInput(ns("slider2"), "Date",
-                    min = min(detectionData$detected -1),
-                    max = max(detectionData$detected +1),  
-                    value = c(min(detectionData$detected -1),max(detectionData$detected +1)),
-                    step = 1,
-                    timeFormat = "%d %b %y",
-                    #animate = animationOptions(interval = 500, loop = FALSE)
-        ),
-        pickerInput(ns("picker10"),
-                    label = "Select Species Type",
-                    choices = sort(unique(detectionData$SPP)),
-                    selected = unique(detectionData$SPP),
-                    multiple = TRUE,
-                    options = list(
-                      `actions-box` = TRUE #this makes the "select/deselect all" option
-                    )
-        ), #end of picker 10 
-        sliderInput(ns("slider10"), "Fish Release Length",
-                    min = min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),
-                    max = max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),  
-                    value = c(min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE), max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE)),
-                    step = 1
-        ),
-        pickerInput(ns("arrayPicker"),
-                    label = "Select Array",
-                    choices = sort(unique(detectionData$antennaName)),
-                    selected = unique(detectionData$antennaName),
-                    multiple = TRUE,
-                    options = list(
-                      `actions-box` = TRUE #this makes the "select/deselect all" option
-                    )
-        ), #end of picker 7 
-        pickerInput(ns("picker7"),
-                    label = "Select Specific Antenna",
-                    choices = sort(unique(detectionData$antenna)),
-                    selected = unique(detectionData$antenna),
-                    multiple = TRUE,
-                    options = list(
-                      `actions-box` = TRUE #this makes the "select/deselect all" option
-                    )
-        ), #end of picker 7 
-        radioButtons(ns("YaxisSelect"), 
+      tabsetPanel(
+        tabPanel(
+          "Data Filters",
+          sidebarPanel(
+            textInput(ns("textinput3"), label = "Filter by Tag"),
+            sliderInput(ns("slider2"), "Date",
+                        min = min(detectionData$detected -1),
+                        max = max(detectionData$detected +1),  
+                        value = c(min(detectionData$detected -1),max(detectionData$detected +1)),
+                        step = 1,
+                        timeFormat = "%d %b %y",
+                        #animate = animationOptions(interval = 500, loop = FALSE)
+            ),
+            pickerInput(ns("picker10"),
+                        label = "Select Species Type",
+                        choices = sort(unique(detectionData$SPP)),
+                        selected = unique(detectionData$SPP),
+                        multiple = TRUE,
+                        options = list(
+                          `actions-box` = TRUE #this makes the "select/deselect all" option
+                        )
+            ), #end of picker 10 
+            sliderInput(ns("slider10"), "Fish Release Length",
+                        min = min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),
+                        max = max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),  
+                        value = c(min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE), max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE)),
+                        step = 1
+            ),
+            pickerInput(ns("arrayPicker"),
+                        label = "Select Array",
+                        choices = sort(unique(detectionData$antennaName)),
+                        selected = unique(detectionData$antennaName),
+                        multiple = TRUE,
+                        options = list(
+                          `actions-box` = TRUE #this makes the "select/deselect all" option
+                        )
+            ), #end of picker 7 
+            pickerInput(ns("picker7"),
+                        label = "Select Specific Antenna",
+                        choices = sort(unique(detectionData$antenna)),
+                        selected = unique(detectionData$antenna),
+                        multiple = TRUE,
+                        options = list(
+                          `actions-box` = TRUE #this makes the "select/deselect all" option
+                        )
+            ), #end of picker 7 
+            radioButtons(ns("DetectionSelect"), 
+                         "Detection Display",
+                         choices = c("Raw Detections", 
+                                     "Movements"),
+                         selected = "Raw Detections"),
+            
+            actionButton(ns("renderButton"), label = "Render Data", width = "100%")
+            
+          )
+          
+        ), 
+        tabPanel("Display Options", 
+                 sidebarPanel(
+                   
+                   radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
                                 choices = c("Detections", 
                                             "Discharge"),
-                                selected = "Detections"), 
-        actionButton(ns("renderButton"), label = "Render Data", width = "100%")
-        
-      ), 
+                                selected = "Detections")
+                   
+                 ) 
+                 )
+      ),
       mainPanel(shinydashboard::box(title = "Detections and Discharge",
                                     width = 12, 
                                     plotlyOutput(ns("OverlayPlot")), 
@@ -74,6 +92,8 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
         
+        #validate(need(isTruthy(input$sliderDischarge)))
+        
         if(input$textinput3 != ''){
           detectionDatafiltered <- detectionData %>%
             filter(newTag %in% trimws(input$textinput3),
@@ -87,12 +107,6 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
             arrange(detected)
           
         } else {
-          print("no tag selected")
-          print(paste("DAte 1: ", input$slider2[1], "and date 2:", input$slider2[2]))
-          print(paste("antennaName ", input$arrayPicker))
-          print(paste("antenna ", input$picker7))
-          print(paste("species ", input$picker10))
-          print(paste("length 1: ", input$slider10[1], "and length 2:", input$slider10[2]))
           
           detectionDatafiltered <- detectionData  %>% 
             filter(
@@ -109,9 +123,17 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
         
         #if raw counts button presed, display counts
-        detectionDatafilteredCounts <- detectionDatafiltered %>%
-          count(Date = date(detected), antennaName)
+        if(input$DetectionSelect == "Raw Detections"){
+          detectionCountDataToDisplay <- detectionDatafiltered %>%
+            count(DetectionDate, antennaName)
+        } else{
+          dailyMovements <- getMovementsFunction(detectionDatafiltered)
+          detectionCountDataToDisplay <- dailyMovements %>%
+            count(movement, DetectionDate)
+        }
+        
         #otherwise, display movements
+        #getMovementsFunction
         
         USGSFiltered <- USGSData %>%
           filter(
@@ -119,8 +141,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           )
         
         
-        dataList <- list("detectionDatafiltered"= detectionDatafilteredCounts, 
+        dataList <- list("detectionDatafiltered"= detectionCountDataToDisplay, 
                          "USGSFiltered" = USGSFiltered)
+        return(dataList)
       })
       
       
@@ -152,6 +175,14 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
+        colorCol <- switch(input$DetectionSelect,
+                             "Raw Detections" = "antennaName",
+                             "Movements" = "movement") # Default
+        
+        # 2. Convert the string to a formula
+        colorFormula <- as.formula(paste0("~", colorCol))
+        # if_else(input$DetectionSelect == "Movements", ~movement, ~antennaName)
+        
         plot_ly() %>%
           add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
                     y = ~Flow,
@@ -163,12 +194,12 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                     mode = "lines"
                     #colors = allColors
           ) %>%
-          add_trace(data = allDataFiltered()$detectionDatafiltered, x = ~Date, y = ~n,
+          add_trace(data = allDataFiltered()$detectionDatafiltered, x = ~DetectionDate, y = ~n,
                     yaxis = movYaxis,
-                    color = ~antennaName,
+                    #color = colorFormula,
                     #colors = allColors,
                     hoverinfo = "text",
-                    text = ~paste('Date: ', as.character(Date), '<br>Number of Detections: ', n),
+                    text = ~paste('Date: ', as.character(DetectionDate), '<br>Number of Detections: ', n),
                     type = 'bar') %>%
           layout(legend = list(x = 1.05, y = 1),
                  barmode = "overlay",
@@ -179,9 +210,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
       })
       
       output$detectionDataTable <- renderDT({
-        detectionDataNoSF <- allDataFiltered()$detectionDatafiltered %>%
-          st_drop_geometry()
-        datatable(detectionDataNoSF,
+        # detectionDataNoSF <- allDataFiltered()$detectionDatafiltered #%>%
+        #   #st_drop_geometry()
+        datatable(allDataFiltered()$detectionDatafiltered,
                   rownames = FALSE,
                   extensions = c('Buttons'),
                   #for slider filter instead of text input
