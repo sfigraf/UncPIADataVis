@@ -49,11 +49,7 @@ environmentalData_UI <- function(id, detectionData) {
                           `actions-box` = TRUE #this makes the "select/deselect all" option
                         )
             ), #end of picker 7 
-            radioButtons(ns("DetectionSelect"), 
-                         "Detection Display",
-                         choices = c("Raw Detections", 
-                                     "Movements"),
-                         selected = "Raw Detections"),
+            
             
             actionButton(ns("renderButton"), label = "Render Data", width = "100%")
             
@@ -62,6 +58,11 @@ environmentalData_UI <- function(id, detectionData) {
         ), 
         tabPanel("Display Options", 
                  sidebarPanel(
+                   radioButtons(ns("DetectionSelect"), 
+                                "Detection Display",
+                                choices = c("Raw Detections", 
+                                            "Movements"),
+                                selected = "Raw Detections"),
                    
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
@@ -72,12 +73,8 @@ environmentalData_UI <- function(id, detectionData) {
                  ) 
                  )
       ),
-      mainPanel(shinydashboard::box(title = "Detections and Discharge",
-                                    width = 12, 
-                                    plotlyOutput(ns("OverlayPlot")), 
-                                    withSpinner(DT::DTOutput(ns("detectionDataTable"))),
-                                    
-      )
+      mainPanel(
+        uiOutput(ns("mainPanelUI")),
       )
     )
     
@@ -89,6 +86,8 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
     id,
     function(input, output, session) {
       
+      ns <- session$ns
+      plotTitle <- reactiveVal("")
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
         
@@ -125,11 +124,11 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         #if raw counts button presed, display counts
         if(input$DetectionSelect == "Raw Detections"){
           detectionCountDataToDisplay <- detectionDatafiltered %>%
-            count(DetectionDate, antennaName)
+            count(DetectionDate, `Antenna or Movement` = antennaName)
         } else{
           dailyMovements <- getMovementsFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- dailyMovements %>%
-            count(movement, DetectionDate)
+            count(`Antenna or Movement` = movement, DetectionDate)
         }
         
         #otherwise, display movements
@@ -146,7 +145,18 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         return(dataList)
       })
       
+      newTitle <- paste(input$DetectionSelect, "and Discharge") 
       
+      plotTitle(newTitle)
+      output$mainPanelUI <- renderUI({
+        tagList(
+          box(title = plotTitle(), 
+              width = 12, 
+              plotlyOutput(ns("OverlayPlot")), 
+              withSpinner(DT::DTOutput(ns("detectionDataTable")))
+          )
+        )
+      })
       
       output$OverlayPlot <- renderPlotly({
         
@@ -175,12 +185,14 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
+        
+        
         colorCol <- switch(input$DetectionSelect,
                              "Raw Detections" = "antennaName",
                              "Movements" = "movement") # Default
-        
-        # 2. Convert the string to a formula
-        colorFormula <- as.formula(paste0("~", colorCol))
+        # 
+        # # 2. Convert the string to a formula
+        # colorFormula <- as.formula(paste0("~", colorCol))
         # if_else(input$DetectionSelect == "Movements", ~movement, ~antennaName)
         
         plot_ly() %>%
@@ -196,7 +208,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           ) %>%
           add_trace(data = allDataFiltered()$detectionDatafiltered, x = ~DetectionDate, y = ~n,
                     yaxis = movYaxis,
-                    #color = colorFormula,
+                    color = ~`Antenna or Movement`,
                     #colors = allColors,
                     hoverinfo = "text",
                     text = ~paste('Date: ', as.character(DetectionDate), '<br>Number of Detections: ', n),
