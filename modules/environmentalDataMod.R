@@ -60,9 +60,9 @@ environmentalData_UI <- function(id, detectionData) {
                  sidebarPanel(
                    radioButtons(ns("DetectionSelect"), 
                                 "Detection Display",
-                                choices = c("Raw Detections", 
+                                choices = c("Total Detections", 
                                             "Movements"),
-                                selected = "Raw Detections"),
+                                selected = "Total Detections"),
                    
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
@@ -122,13 +122,18 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
         
         #if raw counts button presed, display counts
-        if(input$DetectionSelect == "Raw Detections"){
+        if(input$DetectionSelect == "Total Detections"){
           detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate, `Antenna or Movement` = antennaName)
+          
+          allDataToDisplay <- detectionDatafiltered
+          
         } else{
           dailyMovements <- getMovementsFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- dailyMovements %>%
-            count(`Antenna or Movement` = movement, DetectionDate)
+            count(DetectionDate, `Antenna or Movement` = movement)
+          
+          allDataToDisplay <- dailyMovements
         }
         
         #otherwise, display movements
@@ -140,34 +145,37 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           )
         
         
-        dataList <- list("detectionDatafiltered"= detectionCountDataToDisplay, 
+        dataList <- list("detectionCountDataToDisplay"= detectionCountDataToDisplay,
+                         "allDataToDisplay" = allDataToDisplay, 
                          "USGSFiltered" = USGSFiltered)
         return(dataList)
       })
       
-      newTitle <- paste(input$DetectionSelect, "and Discharge") 
+      newTitle <- paste("Daily", input$DetectionSelect, "and Discharge") 
       
       plotTitle(newTitle)
       output$mainPanelUI <- renderUI({
         tagList(
           box(title = plotTitle(), 
               width = 12, 
-              plotlyOutput(ns("OverlayPlot")), 
-              withSpinner(DT::DTOutput(ns("detectionDataTable")))
+              plotlyOutput(ns("OverlayPlot")) 
+              
+          ), 
+          tabsetPanel(
+            tabPanel("Count Data (graphed)",
+              withSpinner(DT::DTOutput(ns("countsDataTable"))), 
+              downloadData_UI(ns("downloadCountsDataTable"))
+            ),
+            tabPanel("All Data",
+                     withSpinner(DT::DTOutput(ns("allDataTable"))), 
+                     downloadData_UI(ns("downloadAllDataTable"))
+            )
           )
+          
         )
       })
       
       output$OverlayPlot <- renderPlotly({
-        
-        # if(!input$variableSelect2 %in% c("USGSDischarge", "USGSWatertemp")){
-        #   line_color = ~Site
-        #   nameOfLine = ~Site
-        # } else{
-        #   line_color = I("#87CEEB")
-        #   nameOfLine = case_when(input$variableSelect2 == "USGSDischarge" ~ "USGS Discharge", 
-        #                          input$variableSelect2 == "USGSWatertemp" ~ "USGS Water Temp (F)")
-        # }
         
         line_color = I("#87CEEB")
         nameOfLine = "USGS Discharge"
@@ -187,13 +195,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
         
         
-        colorCol <- switch(input$DetectionSelect,
-                             "Raw Detections" = "antennaName",
-                             "Movements" = "movement") # Default
-        # 
-        # # 2. Convert the string to a formula
-        # colorFormula <- as.formula(paste0("~", colorCol))
-        # if_else(input$DetectionSelect == "Movements", ~movement, ~antennaName)
+        # colorCol <- switch(input$DetectionSelect,
+        #                      "Total Detections" = "antennaName",
+        #                      "Movements" = "movement") # Default
         
         plot_ly() %>%
           add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
@@ -206,12 +210,12 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                     mode = "lines"
                     #colors = allColors
           ) %>%
-          add_trace(data = allDataFiltered()$detectionDatafiltered, x = ~DetectionDate, y = ~n,
+          add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
                     yaxis = movYaxis,
                     color = ~`Antenna or Movement`,
                     #colors = allColors,
                     hoverinfo = "text",
-                    text = ~paste('Date: ', as.character(DetectionDate), '<br>Number of Detections: ', n),
+                    text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),
                     type = 'bar') %>%
           layout(legend = list(x = 1.05, y = 1),
                  barmode = "overlay",
@@ -221,10 +225,10 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                                showgrid = FALSE))
       })
       
-      output$detectionDataTable <- renderDT({
-        # detectionDataNoSF <- allDataFiltered()$detectionDatafiltered #%>%
+      output$countsDataTable <- renderDT({
+        # detectionDataNoSF <- allDataFiltered()$detectionCountDataToDisplay #%>%
         #   #st_drop_geometry()
-        datatable(allDataFiltered()$detectionDatafiltered,
+        datatable(allDataFiltered()$detectionCountDataToDisplay,
                   rownames = FALSE,
                   extensions = c('Buttons'),
                   #for slider filter instead of text input
@@ -236,6 +240,26 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                   )
         )
       })
+      downloadData_Server("downloadCountsDataTable", allDataFiltered()$detectionCountDataToDisplay, "countsData")
+      
+      
+      output$allDataTable <- renderDT({
+        # detectionDataNoSF <- allDataFiltered()$detectionCountDataToDisplay #%>%
+        #   #st_drop_geometry()
+        datatable(allDataFiltered()$allDataToDisplay,
+                  rownames = FALSE,
+                  extensions = c('Buttons'),
+                  #for slider filter instead of text input
+                  filter = 'top',
+                  options = list(
+                    pageLength = 10, info = TRUE, lengthMenu = list(c(10,25, 50, 100, 200), c("10", "25", "50","100","200")),
+                    dom = 'lfrtip', #had to add 'lowercase L' letter to display the page length again #errorin list: arg 5 is empty because I had a comma after the dom argument so it thought there was gonna be another argument input
+                    language = list(emptyTable = "Enter inputs and press Render Table")
+                  )
+        )
+      })
+      downloadData_Server("downloadAllDataTable", allDataFiltered()$allDataToDisplay, "AllData")
+      
     }
   )
 }
