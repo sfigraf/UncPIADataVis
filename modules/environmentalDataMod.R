@@ -240,6 +240,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                   )
         )
       })
+      
       downloadData_Server("downloadCountsDataTable", allDataFiltered()$detectionCountDataToDisplay, "countsData")
       
       
@@ -258,6 +259,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                   )
         )
       })
+      
       downloadData_Server("downloadAllDataTable", allDataFiltered()$allDataToDisplay, "AllData")
       
     }

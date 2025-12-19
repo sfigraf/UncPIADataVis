@@ -13,6 +13,7 @@ downloadData_Server <- function(id, data, fileName = "UncDataDownload") {
       ns <- session$ns
       
       observeEvent(input$downloadActionButton, {
+        print("download button clicked")
         
         showModal(modalDialog(
           fluidRow(
@@ -46,7 +47,7 @@ downloadData_Server <- function(id, data, fileName = "UncDataDownload") {
           size = "s"
           
         ))
-      })
+      }, ignoreInit = TRUE)
       
       output$downloadCSV <- downloadHandler(
         filename = function() {
