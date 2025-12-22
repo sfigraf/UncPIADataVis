@@ -9,9 +9,9 @@ environmentalData_UI <- function(id, detectionData) {
           sidebarPanel(
             textInput(ns("textinput3"), label = "Filter by Tag"),
             sliderInput(ns("slider2"), "Date",
-                        min = min(detectionData$detected -1),
-                        max = max(detectionData$detected +1),  
-                        value = c(min(detectionData$detected -1),max(detectionData$detected +1)),
+                        min = min(detectionData$DetectionDate -1),
+                        max = max(detectionData$DetectionDate +1),  
+                        value = c(min(detectionData$DetectionDate -1),max(detectionData$DetectionDate +1)),
                         step = 1,
                         timeFormat = "%d %b %y",
                         #animate = animationOptions(interval = 500, loop = FALSE)
@@ -68,7 +68,13 @@ environmentalData_UI <- function(id, detectionData) {
                                 "Primary Y Axis Data",
                                 choices = c("Detections", 
                                             "Discharge"),
-                                selected = "Detections")
+                                selected = "Detections"),
+                   radioButtons(ns("BarDisplay"), 
+                                "Bar Display",
+                                choices = c("group", 
+                                            "stack", 
+                                            "overlay"),
+                                selected = "stack")
                    
                  ) 
                  )
@@ -94,9 +100,14 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         #validate(need(isTruthy(input$sliderDischarge)))
         
         if(input$textinput3 != ''){
+          
+          validate(
+            need(input$textinput3 %in% detectionData$newTag, "Tag value not found in newTag column.Try removing last 2 digits of tag.")
+          )
+          
           detectionDatafiltered <- detectionData %>%
             filter(newTag %in% trimws(input$textinput3),
-                   detected >= input$slider2[1] & detected <= input$slider2[2],
+                   DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2],
                    antennaName %in% c(input$arrayPicker),
                    antenna %in% c(input$picker7),
                    SPP %in% c(input$picker10),
@@ -109,7 +120,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           
           detectionDatafiltered <- detectionData  %>% 
             filter(
-              detected >= input$slider2[1] & detected <= input$slider2[2],
+              DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2],
               antennaName %in% c(input$arrayPicker),
               antenna %in% c(input$picker7),
               SPP %in% c(input$picker10),
@@ -138,10 +149,16 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
         #otherwise, display movements
         #getMovementsFunction
+        # input = list(slider2 = c("2025-11-10", "2025-11-11"))
+        # x <- USGSFlows$USGSDataDaily %>%
+        #   dplyr::filter(
+        #   Date >= input$slider2[1] & Date <= input$slider2[2]
+        # )
+          
         
         USGSFiltered <- USGSData %>%
-          filter(
-            Date >= input$slider2[1] & Date <= input$slider2[2]
+          dplyr::filter(
+            Date >= (input$slider2[1]) & Date <= input$slider2[2]
           )
         
         
@@ -207,10 +224,12 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                     type = "scatter",
                     yaxis = envYaxis,
                     connectgaps = TRUE,
-                    mode = "lines"
+                    mode = "lines+markers", 
+                    inherit = FALSE
                     #colors = allColors
           ) %>%
           add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
+                    inherit = FALSE,
                     yaxis = movYaxis,
                     color = ~`Antenna or Movement`,
                     #colors = allColors,
@@ -218,7 +237,8 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                     text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),
                     type = 'bar') %>%
           layout(legend = list(x = 1.05, y = 1),
-                 barmode = "overlay",
+                 #xaxis = list(type = 'date', range = c(input$slider2[1] - .5,input$slider2[2] + .5)),
+                 barmode = input$BarDisplay,
                  xaxis = list(title = "Date"),
                  yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
                  yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
