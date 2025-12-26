@@ -51,7 +51,8 @@ environmentalData_UI <- function(id, detectionData) {
             ), #end of picker 7 
             
             
-            actionButton(ns("renderButton"), label = "Render Data", width = "100%")
+            actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
+            h6("Note: entries with NA values in any of the filter fields are excluded from the results")
             
           )
           
@@ -61,8 +62,9 @@ environmentalData_UI <- function(id, detectionData) {
                    radioButtons(ns("DetectionSelect"), 
                                 "Detection Display",
                                 choices = c("Total Detections", 
-                                            "Movements"),
+                                            "Status"),
                                 selected = "Total Detections"),
+                   h6("'Status' refers to the last detected array of the day for an individual tag"),
                    
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
@@ -135,16 +137,16 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         #if raw counts button presed, display counts
         if(input$DetectionSelect == "Total Detections"){
           detectionCountDataToDisplay <- detectionDatafiltered %>%
-            count(DetectionDate, `Antenna or Movement` = antennaName)
+            count(DetectionDate, `Antenna or Status` = antennaName)
           
           allDataToDisplay <- detectionDatafiltered
           
         } else{
-          dailyMovements <- getMovementsFunction(detectionDatafiltered)
-          detectionCountDataToDisplay <- dailyMovements %>%
-            count(DetectionDate, `Antenna or Movement` = movement)
+          dailyStatus <- getMovementsFunction(detectionDatafiltered)
+          detectionCountDataToDisplay <- dailyStatus %>%
+            count(DetectionDate, `Antenna or Status` = `Study Area Status`)
           
-          allDataToDisplay <- dailyMovements
+          allDataToDisplay <- dailyStatus
         }
         
         #otherwise, display movements
@@ -231,7 +233,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
                     inherit = FALSE,
                     yaxis = movYaxis,
-                    color = ~`Antenna or Movement`,
+                    color = ~`Antenna or Status`,
                     #colors = allColors,
                     hoverinfo = "text",
                     text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),

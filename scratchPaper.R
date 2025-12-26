@@ -91,7 +91,7 @@ filteredDataDistinct <- filteredData %>%
 
 tagDifs <- anti_join(filteredDataAll, filteredDataDistinct, by = "newTag" )
 
-x1 <- filteredDataDistinct %>%
+studyAreaCounts <- filteredData %>%
   count(DetectionDate, State)
   #get number of fish that had a downstream movement on the end of the day (aka ended the day outside the study area)
   #compare that to total number of fish tagged
