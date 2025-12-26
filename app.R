@@ -1,50 +1,115 @@
-#
-# This is a Shiny web application. You can run the application by clicking
-# the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    https://shiny.posit.co/
-#
-
 library(shiny)
+library(shinythemes)
+library(tidyverse)
+library(dataRetrieval) #for USGS 
+library(leaflet) #for map
+library(sf)
+library(plotly)
+library(shinydashboard) #for box()
+library(readxl)
+library(shinycssloaders) #withSpinner
+library(DT)
+library(shinyWidgets) # for pickerInputs
 
-# Define UI for application that draws a histogram
+antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
+#detections_20251216 <- read_csv("data/detections_20251216.csv")
+detections <- read_excel("data/detections_20251216.xlsx", 
+                         col_types = c("text", "text", "date", 
+              "numeric", "text", "numeric"))
+Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
+                               col_types = c("date", "text", "numeric", 
+                                             "text", "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric"))
+
+antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
+antennasSF <- antennasSFAll %>%
+  distinct(geometry, .keep_all = TRUE)
+
+
+for (i in list.files("./modules/")) {
+  if (grepl(".R", i)) {
+    source(paste0("./modules/",i))
+  }
+}
+neededFunctions <- c("getDailyand15MinUSGSData.R", "getMovementsFunction.R")
+
+for (i in neededFunctions) {
+  source(paste0("./functions/",i))
+}
+
+
+
+USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
+
+###Data Wrangling
+
+Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
+  select(`Release Date` = Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
+
+detections1 <- detections %>%
+  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
+detectionsAttributesFlows <- detections1 %>%
+  left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
+  )) %>%
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+  mutate(DetectionDate = date(detected)) %>%
+  left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
+  #st_as_sf()
+
+# NARaw <- detectionsAttributesFlows %>%
+#   st_drop_geometry() %>%
+#   filter(is.na(SPP)) 
+# 
+# NACounts <- NARaw %>%
+#   count(newTag)
+# 
+# NAs <- NARaw %>%
+#   distinct(newTag, .keep_all = TRUE)
+#str_length("989.00103062026096")
+
+# dailyDetectionData <- detectionsAttributesFlows %>%
+#   count(Date = date(detected), antennaName)
+##########MOVEMENTS
+
+
+# x <- detectionsAttributesFlows %>%
+#   group_by(dec_tag) %>%
+#   arrange(detected) %>%
+#   #filter(dec_tag == "3DD.0078E38638") %>%
+#   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
+#                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
+#                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+#                               antennaName == lag(antennaName) ~ "No Movement",
+#                               TRUE ~ NA
+#                               )
+#                               )
+#   
+
 ui <- fluidPage(
-
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
-
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
-
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
-    )
+  navbarPage(title = "Uncompahgre Data Exploration",
+             id = "tabs", 
+             theme = shinytheme("journal"), #end of navbar page arguments; what follow is all inside it
+             tabPanel("Discharge and Detections", 
+                      environmentalData_UI("environmentalData", detectionsAttributesFlows)
+                      ), 
+             tabPanel("Map",
+                      map_UI("map")
+             )
+  )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
+  
+  observe({
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsAttributesFlows)
+    map_Server("map", antennasSF, detectionsAttributesFlows)
+    
+  })
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white',
-             xlab = 'Waiting time to next eruption (in mins)',
-             main = 'Histogram of waiting times')
-    })
+  
 }
 
 # Run the application 
