@@ -58,6 +58,12 @@ detectionsAttributesFlows <- detections1 %>%
   left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
   #st_as_sf()
 
+#####QAQC
+morethan1dec_tag <- detectionsAttributesFlows %>%
+  distinct(dec_tag, newTag) %>%
+  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
+  filter(`Number of dec_tag Entries` > 1)
+
 # NARaw <- detectionsAttributesFlows %>%
 #   st_drop_geometry() %>%
 #   filter(is.na(SPP)) 
@@ -96,7 +102,10 @@ ui <- fluidPage(
                       ), 
              tabPanel("Map",
                       map_UI("map")
-             )
+             ), 
+             tabPanel("QAQC", 
+                      QAQC_UI("qaqc")
+                      )
   )
 )
 
@@ -106,6 +115,7 @@ server <- function(input, output) {
   observe({
     environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsAttributesFlows)
     map_Server("map", antennasSF, detectionsAttributesFlows)
+    QAQC_Server("qaqc", morethan1dec_tag)
     
   })
 

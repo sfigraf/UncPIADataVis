@@ -1,3 +1,5 @@
+detectionData <- detectionsAttributesFlows
+
 getMovementsFunction <- function(detectionData) {
   
   detectionsFIrstLast <- detectionData %>%

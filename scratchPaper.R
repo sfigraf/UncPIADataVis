@@ -43,9 +43,9 @@ detectionsSF <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
   left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) 
-
-detectionsFIrstLast <- detectionsSF %>%
-  group_by(dec_tag, date(detected)) %>%
+detectionsAttributesFlows
+detectionsFIrstLast <- detectionData %>%
+  group_by(dec_tag, DetectionDate) %>%
   arrange(detected) %>%
   mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
                                 detected == max(detected) ~ "Last_of_day",
@@ -61,12 +61,48 @@ dailyMovementsTableAll <- detectionsFIrstLast %>%
                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
                               antennaName == lag(antennaName) ~ "No Movement",
+                              is.na(lag(antennaName)) ~ "First Antenna Detection",
                               TRUE ~ NA), 
-         detectionDate = date(detected)
+         #states of if a fish is in the study area or not
+         #if there is no previous antena name, it's the first of the detections and the fish is inside the study area
+         State = case_when(is.na(lag(antennaName)) | str_detect(antennaName, c("Upstream")) ~ "Inside study area", 
+                           str_detect(antennaName, c("Downstream")) ~"Outside study area",
+                           antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+                           TRUE ~ NA
+                           #if the fish's last antenna was US antenna, it's inside the study area
+                           )
+         #detectionDate = date(detected)
          # long = st_coordinates(detectionsSF)[row_number(),1], 
          # lat = st_coordinates(detectionsSF)[row_number(),2]
-  ) #%>%
-  #st_drop_geometry()
+  )
+
+
+
+filteredData <- dailyMovementsTableAll %>%
+  ungroup() %>%
+  filter(first_last == "Last_of_day")
+filteredDataAll <- filteredData %>%
+  filter(DetectionDate == as.Date("2025-11-15"), 
+         State == "Outside study area")
+filteredDataDistinct <- filteredData %>%
+  distinct(newTag, DetectionDate, .keep_all = T) %>%
+  filter(DetectionDate == as.Date("2025-11-15"), 
+         State == "Outside study area")
+
+tagDifs <- anti_join(filteredDataAll, filteredDataDistinct, by = "newTag" )
+
+x1 <- filteredDataDistinct %>%
+  count(DetectionDate, State)
+  #get number of fish that had a downstream movement on the end of the day (aka ended the day outside the study area)
+  #compare that to total number of fish tagged
+
+###tags with more than 1 dec_tag
+morethan1dec_tag <- detectionsAttributesFlows %>%
+  distinct(dec_tag, newTag) %>%
+  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
+  filter(`Number of dec_tag Entries` > 1)
+
+
 
 dailyMovementsTablemoveOnly <- dailyMovementsTableAll %>%
   distinct(Date, dec_tag, antennaName, movement, .keep_all = TRUE)
