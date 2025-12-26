@@ -17,6 +17,7 @@ getMovementsFunction <- function(detectionData) {
                                 str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                                 antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
                                 antennaName == lag(antennaName) ~ "No Movement",
+                                is.na(lag(antennaName)) ~ "First Antenna Detection",
                                 TRUE ~ NA)
            #detectionDate = date(detected)
            # long = st_coordinates(detectionsSF)[row_number(),1], 
