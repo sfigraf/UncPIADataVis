@@ -10,7 +10,6 @@ library(readxl)
 library(shinycssloaders) #withSpinner
 library(DT)
 library(shinyWidgets) # for pickerInputs
-
 antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
 #detections_20251216 <- read_csv("data/detections_20251216.csv")
 detections <- read_excel("data/detections_20251216.xlsx", 
@@ -40,6 +39,7 @@ for (i in neededFunctions) {
 }
 
 
+studyStartDate <- min(date(detections$detected))
 
 USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
 

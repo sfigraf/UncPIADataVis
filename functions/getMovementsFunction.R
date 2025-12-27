@@ -1,4 +1,4 @@
-detectionData <- detectionsAttributesFlows
+#detectionData <- detectionsAttributesFlows
 
 getMovementsFunction <- function(detectionData) {
   
