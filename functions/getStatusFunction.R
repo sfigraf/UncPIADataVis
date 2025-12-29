@@ -1,4 +1,4 @@
-#detectionData <- detectionsAttributesFlows
+detectionData <- detectionsAttributesFlows
 
 getStatusFunction <- function(detectionData) {
   
@@ -36,7 +36,7 @@ getStatusFunction <- function(detectionData) {
            #if there is no previous antena name, it's the first of the detections and the fish is inside the study area
            `Study Area Status` = case_when(is.na(lag(antennaName)) | str_detect(antennaName, c("Upstream")) ~ "Inside study area", 
                              str_detect(antennaName, c("Downstream")) ~"Outside study area",
-                             antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+                             antennaName == "Cow Creek Antenna" ~ "In Cow Creek",
                              TRUE ~ NA
            )
            #detectionDate = date(detected)
@@ -44,6 +44,7 @@ getStatusFunction <- function(detectionData) {
            # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
   #find first detection after release
+  #MAYBE CHANGE TO JOIN ON NEWTAG ONCE RELEASE DATA IS CLEANER
   preStudyTagStatus <- dailyMovementsTableAll %>%
     group_by(dec_tag) %>%
     arrange(detected) %>%
@@ -68,7 +69,7 @@ getStatusFunction <- function(detectionData) {
   
   #gets all tags, especially ones not detected yet with antennas
   allTagsStatusDf <- statusLastOfDay %>%
-    right_join(Unc_Tag_Releases1[,c("Full Tag", "Release Date")], by = c("newTag" = "Full Tag"))
+    right_join(Unc_Tag_Releases1[,c("Full Tag")], by = c("newTag" = "Full Tag"))
   #for tags not detected yet on antennas, we assume they're still within the study area
   #this will change if a tag is detected first on the downstream antenna; will get caught in the "preStudyStatus" column
   
@@ -98,6 +99,8 @@ getStatusFunction <- function(detectionData) {
     #ensures that missing values get changed 
     tidyr::fill(`Study Area Status`, .direction = "down") %>%
     tidyr::fill(preStudyStatus, .direction = "up") %>%
+    #fill in rest of attribute info for filtering purposes
+    #tidyr::fill(`TL 1st Enc. (mm)`, `SPP`, `Release Date`, antennaName, antenna, Flow, .direction = "updown") %>%
     #for the sutdy area that didn't have a previous one to fill down, it's at the beginning of the study so use values from "preStudyStatus" 
     #IF IT WAS OUTSIDE THE STUDY AREA AND CAME BACK IN ITS FIRST DETECTION WILL BE THE DOWNSTREAM ARRAY
     #ie tag 989.001040499618
@@ -105,7 +108,19 @@ getStatusFunction <- function(detectionData) {
     mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), preStudyStatus, `Study Area Status`)) %>%
     ungroup()
   
-  return(allTagsStatusDfFilled)
+  #join back with release file to get all attribute info relevant for filtering
+  #shouldn't get a warning message when all duplicate tag entries are sorted out
+  allTagsStatusDfFilledAttributes <- allTagsStatusDfFilled %>%
+    left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+    left_join(USGSFlows$USGSDataDaily, by = c("StatusDate" = "Date"))
+  
+  allTagsStatusDfFilledAttributesCleaned <- allTagsStatusDfFilledAttributes %>%
+    mutate(Flow = coalesce(Flow.x, Flow.y), 
+           `TL 1st Enc. (mm)` = coalesce(`TL 1st Enc. (mm).x`, `TL 1st Enc. (mm).y`), 
+           SPP = coalesce(SPP.x, SPP.y), 
+           `Release Date` = coalesce(`Release Date.x`, `Release Date.y`))
+  
+  return(allTagsStatusDfFilledAttributesCleaned)
 }
 
 #difs 
