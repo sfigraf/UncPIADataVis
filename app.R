@@ -58,6 +58,7 @@ detectionsAttributesFlows <- detections1 %>%
   left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
   #st_as_sf()
 
+
 #####QAQC
 morethan1dec_tag <- detectionsAttributesFlows %>%
   distinct(dec_tag, newTag) %>%

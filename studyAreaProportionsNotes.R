@@ -46,6 +46,15 @@ x3 <- x2 %>%
   mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), "Inside study area", `Study Area Status`)) %>%
   ungroup()
 
+proportionCounts <- x3 %>%
+  group_by(StatusDate, `Study Area Status`) %>%
+  summarize(PropInStudyArea = n())
+
+# uniqueTags <- x3 %>%
+#   distinct(newTag) %>%
+#   count(newTag) %>%
+#   mutate(nDigits = str_length(newTag))
+
 #tag that 989.001040500063
 x4 <- x3 %>%
   filter(is.na(`Study Area Status`))
