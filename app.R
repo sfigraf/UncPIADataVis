@@ -65,6 +65,13 @@ morethan1dec_tag <- detectionsAttributesFlows %>%
   count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
   filter(`Number of dec_tag Entries` > 1)
 
+moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
+  count(`Full Tag`, name = "Number of 'Full Tag' Entries") %>%
+  filter(`Number of 'Full Tag' Entries` > 1)
+
+qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
+                 "moreThan1ReleaseEntry" = moreThan1ReleaseEntry)
+
 # NARaw <- detectionsAttributesFlows %>%
 #   st_drop_geometry() %>%
 #   filter(is.na(SPP)) 
@@ -116,7 +123,7 @@ server <- function(input, output) {
   observe({
     environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsAttributesFlows)
     map_Server("map", antennasSF, detectionsAttributesFlows)
-    QAQC_Server("qaqc", morethan1dec_tag)
+    QAQC_Server("qaqc", qaqcData)
     
   })
 

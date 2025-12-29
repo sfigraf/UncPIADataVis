@@ -2,7 +2,17 @@
 
 getMovementsFunction <- function(detectionData) {
   
-  detectionsFIrstLast <- detectionData %>%
+  #remove duplicate detection rows: most tags don't have this but one tag (12/29/2025) was detected same timestamp on dif antennas 
+  #throws off first/last if timestamps were both first or last of the day
+  #989.00104049961897 for example
+  #specific antenna detected doesn't particlaruly matter when were calculating movemnts/how many fish stayed above/below study area
+  detectionDataDistinct <- detectionData %>%
+    distinct(dec_tag, detected, antennaName, .keep_all = TRUE)
+  
+  # see all isntances here 
+  # removedRows <- detectionData %>%
+  #   anti_join(detectionDataDistinct)
+  detectionsFIrstLast <- detectionDataDistinct %>%
     group_by(dec_tag, DetectionDate) %>%
     arrange(detected) %>%
     mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
@@ -33,11 +43,21 @@ getMovementsFunction <- function(detectionData) {
            # long = st_coordinates(detectionsSF)[row_number(),1], 
            # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
+  #find first detection after release
+  preStudyTagStatus <- dailyMovementsTableAll %>%
+    group_by(dec_tag) %>%
+    arrange(detected) %>%
+    #if the fish has no previous antenna assigned and the first detection is donwstream array or cow creek, then it was outside the study area before the start of the study
+    mutate(preStudyStatus = if_else(is.na(lag(antennaName)) & (str_detect(antennaName, c("Downstream")) | str_detect(antennaName, c("Cow Creek Antenna"))), "Outside study area", "Inside study area")) %>%
+    filter(detected == first(detected))
+  
+  
   
   ###For "movements" we're looking at poplation levels of whether or not a fish in the the study area or not at the last detection of the day
   statusLastOfDay <- dailyMovementsTableAll %>%
     ungroup() %>%
-    filter(first_last == "Last_of_day")
+    filter(first_last == "Last_of_day") %>%
+    left_join(preStudyTagStatus[,c("dec_tag", "preStudyStatus")], by = "dec_tag")
   # dailyMovementsTablemoveFirstLast <- dailyMovementsTableAll %>%
   #   #separate to main array and cow creek
   #   mutate(array = if_else(antennaName %in% c("Uncompahgre River Antenna Downstream", "Uncompahgre River Antenna Upstream"), "Main Array", "Cow Creek")) %>%
@@ -49,3 +69,12 @@ getMovementsFunction <- function(detectionData) {
   
   return(statusLastOfDay)
 }
+
+#difs 
+# statusLastOfDayCompare <- statusLastOfDay %>%
+#   count(dec_tag)
+# statusDfCounts <- statusDf %>%
+#   count(dec_tag)
+#   #anti_join(statusLastOfDayCompare)
+# difs <- statusLastOfDayCompare %>%
+#   anti_join(statusDfCounts)
