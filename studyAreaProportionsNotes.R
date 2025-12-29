@@ -40,23 +40,29 @@ x2 <- x1 %>%
 x3 <- x2 %>%
   group_by(newTag) %>%
   arrange(StatusDate) %>%
-  fill(`Study Area Status`, .direction = "down") #%>%
-  #for the sutdy area that didn't have a previous one to fill down, it's at the beginning of the study so it's assumed right now that they are inside the study area
-  #NEED TO CODE IN IF A FISH WAS RELEASED BEFORE THE STUDY, THEN IF IT WAS OUTSIDE THE STUDY AREA AND CAME BACK IN ITS FIRST DETECTION WILL BE THE DOWNSTREAM ARRAY
-  
-  mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), "Inside study area", `Study Area Status`)) %>%
+  #ensures that missing values get changed 
+  tidyr::fill(`Study Area Status`, .direction = "down") %>%
+  tidyr::fill(preStudyStatus, .direction = "up") %>%
+  #for the sutdy area that didn't have a previous one to fill down, it's at the beginning of the study so use values from "preStudyStatus" 
+  #IF IT WAS OUTSIDE THE STUDY AREA AND CAME BACK IN ITS FIRST DETECTION WILL BE THE DOWNSTREAM ARRAY
+  #ie tag 989.001040499618
+  #replace_na might be cleaner and faster but this is more descriptive
+  mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), preStudyStatus, `Study Area Status`)) %>%
   ungroup()
 
-proportionCounts <- x3 %>%
-  group_by(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) %>%
-  summarize(n = n())
-#should add up to the total number of rows in 
+newProportionCounts <- x3 %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) #%>%
+  #summarize(n = n())
+#should add up to the total number of unique rows in release file bc based off newTag
 totals <- proportionCounts %>%
   group_by(DetectionDate) %>%
   summarise(total = sum(n))
+oldProportionCounts <- proportionCounts
 
-
-
+y1 <- x3 %>%
+  filter(preStudyStatus == "Outside study area", 
+         StatusDate != as.Date("2025-11-11")) %>%
+  distinct(newTag, .keep_all = TRUE)
 # uniqueTags <- x3 %>%
 #   distinct(newTag) %>%
 #   count(newTag) %>%
