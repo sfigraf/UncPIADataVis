@@ -1,6 +1,6 @@
 #detectionData <- detectionsAttributesFlows
 
-getMovementsFunction <- function(detectionData) {
+getStatusFunction <- function(detectionData) {
   
   #remove duplicate detection rows: most tags don't have this but one tag (12/29/2025) was detected same timestamp on dif antennas 
   #throws off first/last if timestamps were both first or last of the day
@@ -66,8 +66,46 @@ getMovementsFunction <- function(detectionData) {
   #   distinct(DetectionDate, dec_tag, array, first_last, .keep_all = TRUE) %>%
   #   ungroup()
   
+  #gets all tags, especially ones not detected yet with antennas
+  allTagsStatusDf <- statusLastOfDay %>%
+    right_join(Unc_Tag_Releases1[,c("Full Tag", "Release Date")], by = c("newTag" = "Full Tag"))
+  #for tags not detected yet on antennas, we assume they're still within the study area
+  #this will change if a tag is detected first on the downstream antenna; will get caught in the "preStudyStatus" column
   
-  return(statusLastOfDay)
+  #also create "StatusDate" column based on filtered data and if a fish has already bene detected that day; will be used to make a sequence
+  minDate <- if_else(min(date(allTagsStatusDf$detected), na.rm = TRUE) >= studyStartDate, min(date(allTagsStatusDf$detected), na.rm = TRUE), studyStartDate)
+  allTagsStatusDf2 <- allTagsStatusDf %>%
+    mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), "Inside study area", `Study Area Status`), 
+           StatusDate = if_else(!is.na(DetectionDate), DetectionDate, minDate)
+           #StatusDate = coalesce(DetectionDate, `Release Date.y`)
+    )
+  allTagsStatusDfCompleted <- allTagsStatusDf2 %>%
+    #group_by(newTag) %>%
+    #ungroup() %>%
+    #arrange(StatusDate) %>%
+    #first arg is group so group by new tag, then next arg is column you have to fill in. Must be present in data
+    tidyr::complete(newTag, StatusDate = seq.Date(
+      from = min(StatusDate),
+      to   = max(x1$StatusDate),
+      by   = "day"
+    )
+    )
+  #fill in missing values
+  
+  allTagsStatusDfFilled <- allTagsStatusDfCompleted %>%
+    group_by(newTag) %>%
+    arrange(StatusDate) %>%
+    #ensures that missing values get changed 
+    tidyr::fill(`Study Area Status`, .direction = "down") %>%
+    tidyr::fill(preStudyStatus, .direction = "up") %>%
+    #for the sutdy area that didn't have a previous one to fill down, it's at the beginning of the study so use values from "preStudyStatus" 
+    #IF IT WAS OUTSIDE THE STUDY AREA AND CAME BACK IN ITS FIRST DETECTION WILL BE THE DOWNSTREAM ARRAY
+    #ie tag 989.001040499618
+    #replace_na might be cleaner and faster but this is more descriptive
+    mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), preStudyStatus, `Study Area Status`)) %>%
+    ungroup()
+  
+  return(allTagsStatusDfFilled)
 }
 
 #difs 

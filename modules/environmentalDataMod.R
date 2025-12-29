@@ -142,15 +142,17 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           allDataToDisplay <- detectionDatafiltered
           
         } else{
-          dailyStatus <- getMovementsFunction(detectionDatafiltered)
+          dailyStatus <- getStatusFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- dailyStatus %>%
-            count(DetectionDate, `Antenna or Status` = `Study Area Status`)
+            count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+          # detectionCountDataToDisplay <- dailyStatus %>%
+          #   count(DetectionDate, `Antenna or Status` = `Study Area Status`)
           
           allDataToDisplay <- dailyStatus
         }
         
         #otherwise, display movements
-        #getMovementsFunction
+        
         # input = list(slider2 = c("2025-11-10", "2025-11-11"))
         # x <- USGSFlows$USGSDataDaily %>%
         #   dplyr::filter(

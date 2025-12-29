@@ -32,7 +32,7 @@ for (i in list.files("./modules/")) {
     source(paste0("./modules/",i))
   }
 }
-neededFunctions <- c("getDailyand15MinUSGSData.R", "getMovementsFunction.R")
+neededFunctions <- c("getDailyand15MinUSGSData.R", "getStatusFunction.R")
 
 for (i in neededFunctions) {
   source(paste0("./functions/",i))
@@ -69,8 +69,12 @@ moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
   count(`Full Tag`, name = "Number of 'Full Tag' Entries") %>%
   filter(`Number of 'Full Tag' Entries` > 1)
 
+detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
+  filter(is.na(`Release Date`))
+
 qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
-                 "moreThan1ReleaseEntry" = moreThan1ReleaseEntry)
+                 "moreThan1ReleaseEntry" = moreThan1ReleaseEntry, 
+                 "detectionsWithoutReleaseData" = detectionsWithoutReleaseData)
 
 # NARaw <- detectionsAttributesFlows %>%
 #   st_drop_geometry() %>%
