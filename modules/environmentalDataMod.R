@@ -31,26 +31,7 @@ environmentalData_UI <- function(id, detectionData) {
                         value = c(min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE), max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE)),
                         step = 1
             ),
-            pickerInput(ns("arrayPicker"),
-                        label = "Select Array",
-                        choices = sort(unique(detectionData$antennaName)),
-                        selected = unique(detectionData$antennaName),
-                        multiple = TRUE,
-                        options = list(
-                          `actions-box` = TRUE #this makes the "select/deselect all" option
-                        )
-            ), #end of picker 7 
-            pickerInput(ns("picker7"),
-                        label = "Select Specific Antenna",
-                        choices = sort(unique(detectionData$antenna)),
-                        selected = unique(detectionData$antenna),
-                        multiple = TRUE,
-                        options = list(
-                          `actions-box` = TRUE #this makes the "select/deselect all" option
-                        )
-            ), #end of picker 7 
-            
-            
+            uiOutput(ns("arrayAndAntennaPickerUI")), 
             actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
             h6("Note: entries with NA values in any of the filter fields are excluded from the results")
             
@@ -60,12 +41,11 @@ environmentalData_UI <- function(id, detectionData) {
         tabPanel("Display Options", 
                  sidebarPanel(
                    radioButtons(ns("DetectionSelect"), 
-                                "Detection Display",
+                                "Data Display",
                                 choices = c("Total Detections", 
                                             "Status"),
                                 selected = "Total Detections"),
                    h6("'Status' refers to the last detected array of the day for an individual tag"),
-                   
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
                                 choices = c("Detections", 
@@ -145,20 +125,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           dailyStatus <- getStatusFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- dailyStatus %>%
             count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
-          # detectionCountDataToDisplay <- dailyStatus %>%
-          #   count(DetectionDate, `Antenna or Status` = `Study Area Status`)
           
           allDataToDisplay <- dailyStatus
         }
-        
-        #otherwise, display movements
-        
-        # input = list(slider2 = c("2025-11-10", "2025-11-11"))
-        # x <- USGSFlows$USGSDataDaily %>%
-        #   dplyr::filter(
-        #   Date >= input$slider2[1] & Date <= input$slider2[2]
-        # )
-          
         
         USGSFiltered <- USGSData %>%
           dplyr::filter(
@@ -195,6 +164,36 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           
         )
       })
+      
+      
+        output$arrayAndAntennaPickerUI <- renderUI({
+          if(input$DetectionSelect != "Status"){
+            tagList(
+              pickerInput(ns("arrayPicker"),
+                          label = "Select Array",
+                          choices = sort(unique(detectionData$antennaName)),
+                          selected = unique(detectionData$antennaName),
+                          multiple = TRUE,
+                          options = list(
+                            `actions-box` = TRUE #this makes the "select/deselect all" option
+                          )
+              ),
+              pickerInput(ns("picker7"),
+                          label = "Select Specific Antenna",
+                          choices = sort(unique(detectionData$antenna)),
+                          selected = unique(detectionData$antenna),
+                          multiple = TRUE,
+                          options = list(
+                            `actions-box` = TRUE #this makes the "select/deselect all" option
+                          )
+              )
+            )
+            
+          }
+        })
+        
+      
+      
       
       output$OverlayPlot <- renderPlotly({
         
