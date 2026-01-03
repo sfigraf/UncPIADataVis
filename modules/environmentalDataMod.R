@@ -46,6 +46,8 @@ environmentalData_UI <- function(id, detectionData) {
                                             "Status"),
                                 selected = "Total Detections"),
                    h6("'Status' refers to the last detected array of the day for an individual tag"),
+                   uiOutput(ns("statusDisplayOptionUI")), 
+                   
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
                                 choices = c("Detections", 
@@ -165,7 +167,15 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         )
       })
       
-      
+      output$statusDisplayOptionUI <- renderUI({
+        if(input$DetectionSelect == "Status"){
+          radioButtons(ns("statusDisplayOption"), 
+                                "Status Display",
+                                choices = c("Bar Graph", 
+                                            "Study Reach %"),
+                                selected = "Bar Graph")
+        }
+      })
         output$arrayAndAntennaPickerUI <- renderUI({
           if(input$DetectionSelect != "Status"){
             tagList(
