@@ -1,4 +1,4 @@
-detectionData <- detectionsAttributesFlows
+#detectionData <- detectionsAttributesFlows
 #funciton gets the "Status" of a fish based off the last array they ended the day on
 #as of 1/5 2025 it's applied to all data and the static file is used in the app
 
@@ -121,7 +121,7 @@ getStatusFunction <- function(detectionData) {
            `TL 1st Enc. (mm)` = coalesce(`TL 1st Enc. (mm).x`, `TL 1st Enc. (mm).y`), 
            SPP = coalesce(SPP.x, SPP.y), 
            `Release Date` = coalesce(`Release Date.x`, `Release Date.y`)) %>%
-    select(names(detectionData), `preStudyStatus`, `Study Area Status`)
+    select(StatusDate, names(detectionData), `preStudyStatus`, `Study Area Status`)
   
   return(allTagsStatusDfFilledAttributesCleaned)
 }

@@ -56,7 +56,7 @@ ui <- fluidPage(
              id = "tabs", 
              theme = shinytheme("journal"), #end of navbar page arguments; what follow is all inside it
              tabPanel("Discharge and Detections", 
-                      environmentalData_UI("environmentalData", combinedDetectionAndStatusData$detectionsAttributesFlows)
+                      environmentalData_UI("environmentalData", combinedDetectionAndStatusData)
                       ), 
              tabPanel("Map",
                       map_UI("map")

@@ -1,5 +1,5 @@
 
-environmentalData_UI <- function(id, detectionData) {
+environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
   ns <- NS(id)
   tagList(
     sidebarLayout(
@@ -8,27 +8,29 @@ environmentalData_UI <- function(id, detectionData) {
           "Data Filters",
           sidebarPanel(
             textInput(ns("textinput3"), label = "Filter by Tag"),
+            #filters by maxing what is in the detection file
             sliderInput(ns("slider2"), "Date",
-                        min = min(detectionData$DetectionDate -1),
-                        max = max(detectionData$DetectionDate +1),  
-                        value = c(min(detectionData$DetectionDate -1),max(detectionData$DetectionDate +1)),
+                        min = min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
+                        max = max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1),  
+                        value = c(min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
+                                  max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1)),
                         step = 1,
                         timeFormat = "%d %b %y",
                         #animate = animationOptions(interval = 500, loop = FALSE)
             ),
             pickerInput(ns("picker10"),
                         label = "Select Species Type",
-                        choices = sort(unique(detectionData$SPP)),
-                        selected = unique(detectionData$SPP),
+                        choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$SPP)),
+                        selected = unique(combinedDetectionAndStatusData$dailyStatus$SPP),
                         multiple = TRUE,
                         options = list(
                           `actions-box` = TRUE #this makes the "select/deselect all" option
                         )
             ), #end of picker 10 
             sliderInput(ns("slider10"), "Fish Release Length",
-                        min = min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),
-                        max = max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE),  
-                        value = c(min(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE), max(detectionData$`TL 1st Enc. (mm)`, na.rm = TRUE)),
+                        min = min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),
+                        max = max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),  
+                        value = c(min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE), max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE)),
                         step = 1
             ),
             uiOutput(ns("arrayAndAntennaPickerUI")), 
@@ -51,7 +53,6 @@ environmentalData_UI <- function(id, detectionData) {
                                 choices = c("Bar" = "bar", 
                                             "Line" = "scatter"),
                                 selected = "bar"),
-                    
                    
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
@@ -91,15 +92,13 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         
       }
       
-      print(detectionData)
+      print(paste("nrow before any filters applied:", nrow(detectionData)))
+      
 
       
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
-        
-        #print(dateColumnToFilter)
-        
-        #validate(need(isTruthy(input$sliderDischarge)))
+
         
         if(input$textinput3 != ''){
           
@@ -108,30 +107,42 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           )
           
           detectionDatafiltered <- detectionData %>%
-            filter(newTag %in% trimws(input$textinput3),
-                   DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2], #.data[[dateColumnToFilter]]
-                   antennaName %in% c(input$arrayPicker),
-                   antenna %in% c(input$picker7),
-                   SPP %in% c(input$picker10),
-                   `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
-                   
+            filter(newTag %in% trimws(input$textinput3)
             ) %>%
             arrange(detected)
           
         } else {
+          detectionDatafiltered <- detectionData
+          # detectionDatafiltered <- detectionData  %>% 
+          #   filter(
+          #     .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
+          #     
+          #     SPP %in% c(input$picker10),
+          #     `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+          #     
+          #   ) %>%
+          #   arrange(detected)
           
-          detectionDatafiltered <- detectionData  %>% 
-            filter(
-              DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2],
-              antennaName %in% c(input$arrayPicker),
-              antenna %in% c(input$picker7),
-              SPP %in% c(input$picker10),
-              `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
-              
-            ) %>%
-            arrange(detected)
-          
+         }
+        
+        if(input$DetectionSelect == "Total Detections"){
+          detectionDatafiltered <- detectionDatafiltered %>%
+            filter(antennaName %in% c(input$arrayPicker),
+                   antenna %in% c(input$picker7)
+                   )
         }
+        print(paste("nrow after antennaname fileters:", nrow(detectionDatafiltered)))
+        #filters that apply to all data tables
+        detectionDatafiltered <- detectionDatafiltered %>%
+          filter(
+            .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2], 
+            SPP %in% c(input$picker10),
+            `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+          ) %>%
+          arrange(detected)
+        
+        #detectionDatafiltered
+        print(paste("nrow after all fileters:", nrow(detectionDatafiltered)))
         
         
         #if raw counts button presed, display counts

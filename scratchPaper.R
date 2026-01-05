@@ -262,3 +262,42 @@ x4 <- x3 %>%
   filter(is.na(`Study Area Status`))
 
 
+#####filering troubelshooting
+detectionData1 <- combinedDetectionAndStatusData$detectionsAttributesFlows
+input <- list(
+  slider2 = c(min(detectionData1$DetectionDate -1), max(detectionData1$DetectionDate +1)), 
+  picker10 = unique(detectionData1$SPP), 
+  arrayPicker = unique(detectionData1$antennaName),
+  picker7 = unique(detectionData1$antenna), 
+  slider10 = c(min(as.numeric(detectionData1$`TL 1st Enc. (mm)`), na.rm = TRUE), max(detectionData1$`TL 1st Enc. (mm)`, na.rm = TRUE))
+)
+dateColumnToFilter <- "StatusDate"
+detectionDatafiltered <- dailyStatus1  %>% 
+  filter(
+    .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
+    # antennaName %in% c(input$arrayPicker),
+    # antenna %in% c(input$picker7),
+    SPP %in% c(input$picker10),
+    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+    
+  ) %>%
+  arrange(detected)
+####detection data 
+dateColumnToFilter <- "DetectionDate"
+alldetectionDatafiltered <- combinedDetectionAndStatusData$detectionsAttributesFlows  %>% 
+  filter(
+    .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
+    antennaName %in% c(input$arrayPicker),
+    antenna %in% c(input$picker7),
+    SPP %in% c(input$picker10),
+    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+    
+  ) %>%
+  arrange(detected)
+
+difs <- anti_join(dailyStatus1, `statusDataInAPp_2026-01-05`)
+difsAlfilters <- anti_join(dailyStatus1, `statusData2_2026-01-05`)
+difsstatusnew <- anti_join(dailyStatus1, `statusData3_2026-01-05`)
+
+x <- dailyStatus1 %>%
+  filter(is.na(`antenna`))
