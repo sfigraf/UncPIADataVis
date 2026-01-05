@@ -216,7 +216,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
 
       
       output$OverlayPlot <- renderPlotly({
-        
+        #define plot object 
+        p <- plot_ly()
+        #define display parameters
         line_color = I("#87CEEB")
         nameOfLine = "USGS Discharge"
       
@@ -233,23 +235,30 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
-        dataDisplayType <- if (!isTruthy(input$statusDisplayOption)) {
-          "bar"
+        
+        ##detection data args
+        #base args that won't change
+        detectionDataArgs <- list(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
+                                  inherit = FALSE,
+                                  yaxis = movYaxis,
+                                  color = ~`Antenna or Status`,
+                                  #colors = allColors,
+                                  hoverinfo = "text",
+                                  text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n))
+        #additional args if status diplsay option is available
+        if (!isTruthy(input$statusDisplayOption) | input$DetectionSelect != "Status") {
+          detectionDataArgs$type = "bar"
         } else {
-          as.character(input$statusDisplayOption)
+          detectionDataArgs$type = as.character(input$statusDisplayOption)
+          #add desired line plot args if the type is scatter
+          if(input$statusDisplayOption == "scatter"){
+            detectionDataArgs$connectgaps = TRUE
+            detectionDataArgs$mode = "lines+markers"
+          }
         }
-        
-        
-        
-        # colorCol <- switch(input$DetectionSelect,
-        #                      "Total Detections" = "antennaName",
-        #                      "Movements" = "movement") # Default
-        # print(isTruthy(input$statusDisplayOption))
-        # type1 <- if_else(!sTruthy(input$statusDisplayOption), as.character(input$statusDisplayOption), "bar")
-        #supress warnings for the mode = and connectgaps args in the detection data trace, since bar type don't use those. 
-        suppressWarnings({
-          
-          plot_ly() %>%
+        print(paste("is tructhy status diplsy option: ", isTruthy(input$statusDisplayOption)))
+
+          p <- p %>%
             add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
                       y = ~Flow,
                       name = nameOfLine,
@@ -261,18 +270,6 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                       inherit = FALSE
                       #colors = allColors
             ) %>%
-            add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
-                      inherit = FALSE,
-                      yaxis = movYaxis,
-                      color = ~`Antenna or Status`,
-                      #colors = allColors,
-                      hoverinfo = "text",
-                      text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),
-                      type = dataDisplayType, 
-                      #hopefully these args are ignored if "bar" selected as type
-                      mode = "lines+markers", 
-                      connectgaps = TRUE
-                      ) %>%
             layout(legend = list(x = 1.05, y = 1),
                    #xaxis = list(type = 'date', range = c(input$slider2[1] - .5,input$slider2[2] + .5)),
                    barmode = input$BarDisplay,
@@ -280,7 +277,14 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                    yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
                    yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
                                  showgrid = FALSE))
-        })
+          #unwrap args defined above 
+          #do.call is like saying "apply this function ("Add_trace()") using these arguments
+          #helpful when sometimes you need to add or change arguments. detectionDataArgs doesn't stay the same
+          #adding the plot p as an argument that needs to be passed as well with list(p = p)
+          p <- do.call(add_trace, c(list(p = p), detectionDataArgs))
+          #display layered plot
+          p
+        
       })
       
       output$countsDataTable <- renderDT({
