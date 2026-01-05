@@ -78,6 +78,10 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
       
       ns <- session$ns
       plotTitle <- reactiveVal("")
+
+# data filtering ----------------------------------------------------------
+
+      
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
         
@@ -142,6 +146,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                          "USGSFiltered" = USGSFiltered)
         return(dataList)
       })
+
+# UI components -----------------------------------------------------------
+
       
       newTitle <- paste("Daily", input$DetectionSelect, "and Discharge") 
       
@@ -171,9 +178,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         if(input$DetectionSelect == "Status"){
           radioButtons(ns("statusDisplayOption"), 
                                 "Status Display",
-                                choices = c("Bar Graph", 
-                                            "Study Reach %"),
-                                selected = "Bar Graph")
+                                choices = c("Bar Graph" = "bar", 
+                                            "Study Reach % Line" = "scatter"),
+                                selected = "bar")
         }
       })
         output$arrayAndAntennaPickerUI <- renderUI({
@@ -204,6 +211,9 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
       
       
+
+# PLOT OUTPUT -------------------------------------------------------------
+
       
       output$OverlayPlot <- renderPlotly({
         
@@ -223,39 +233,54 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
+        dataDisplayType <- if (!isTruthy(input$statusDisplayOption)) {
+          "bar"
+        } else {
+          as.character(input$statusDisplayOption)
+        }
+        
         
         
         # colorCol <- switch(input$DetectionSelect,
         #                      "Total Detections" = "antennaName",
         #                      "Movements" = "movement") # Default
-        
-        plot_ly() %>%
-          add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
-                    y = ~Flow,
-                    name = nameOfLine,
-                    color = line_color, 
-                    type = "scatter",
-                    yaxis = envYaxis,
-                    connectgaps = TRUE,
-                    mode = "lines+markers", 
-                    inherit = FALSE
-                    #colors = allColors
-          ) %>%
-          add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
-                    inherit = FALSE,
-                    yaxis = movYaxis,
-                    color = ~`Antenna or Status`,
-                    #colors = allColors,
-                    hoverinfo = "text",
-                    text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),
-                    type = 'bar') %>%
-          layout(legend = list(x = 1.05, y = 1),
-                 #xaxis = list(type = 'date', range = c(input$slider2[1] - .5,input$slider2[2] + .5)),
-                 barmode = input$BarDisplay,
-                 xaxis = list(title = "Date"),
-                 yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
-                 yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
-                               showgrid = FALSE))
+        # print(isTruthy(input$statusDisplayOption))
+        # type1 <- if_else(!sTruthy(input$statusDisplayOption), as.character(input$statusDisplayOption), "bar")
+        #supress warnings for the mode = and connectgaps args in the detection data trace, since bar type don't use those. 
+        suppressWarnings({
+          
+          plot_ly() %>%
+            add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
+                      y = ~Flow,
+                      name = nameOfLine,
+                      color = line_color, 
+                      type = "scatter",
+                      yaxis = envYaxis,
+                      connectgaps = TRUE,
+                      mode = "lines+markers", 
+                      inherit = FALSE
+                      #colors = allColors
+            ) %>%
+            add_trace(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
+                      inherit = FALSE,
+                      yaxis = movYaxis,
+                      color = ~`Antenna or Status`,
+                      #colors = allColors,
+                      hoverinfo = "text",
+                      text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n),
+                      type = dataDisplayType, 
+                      #hopefully these args are ignored if "bar" selected as type
+                      mode = "lines+markers", 
+                      connectgaps = TRUE
+                      ) %>%
+            layout(legend = list(x = 1.05, y = 1),
+                   #xaxis = list(type = 'date', range = c(input$slider2[1] - .5,input$slider2[2] + .5)),
+                   barmode = input$BarDisplay,
+                   xaxis = list(title = "Date"),
+                   yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
+                   yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
+                                 showgrid = FALSE))
+        })
       })
       
       output$countsDataTable <- renderDT({
