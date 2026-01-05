@@ -46,19 +46,20 @@ environmentalData_UI <- function(id, detectionData) {
                                             "Status"),
                                 selected = "Total Detections"),
                    h6("'Status' refers to the last detected array of the day for an individual tag"),
-                   uiOutput(ns("statusDisplayOptionUI")), 
+                   radioButtons(ns("statusDisplayOption"), 
+                                "Display Type",
+                                choices = c("Bar" = "bar", 
+                                            "Line" = "scatter"),
+                                selected = "bar"),
+                    
                    
                    radioButtons(ns("YaxisSelect"), 
                                 "Primary Y Axis Data",
                                 choices = c("Detections", 
                                             "Discharge"),
                                 selected = "Detections"),
-                   radioButtons(ns("BarDisplay"), 
-                                "Bar Display",
-                                choices = c("group", 
-                                            "stack", 
-                                            "overlay"),
-                                selected = "stack")
+                   uiOutput(ns("barDisplayOptionUI"))
+                   
                    
                  ) 
                  )
@@ -174,13 +175,14 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         )
       })
       
-      output$statusDisplayOptionUI <- renderUI({
-        if(input$DetectionSelect == "Status"){
-          radioButtons(ns("statusDisplayOption"), 
-                                "Status Display",
-                                choices = c("Bar Graph" = "bar", 
-                                            "Study Reach % Line" = "scatter"),
-                                selected = "bar")
+      output$barDisplayOptionUI <- renderUI({
+        if(input$statusDisplayOption == "bar"){
+          radioButtons(ns("BarDisplay"), 
+                       "Bar Display",
+                       choices = c("group", 
+                                   "stack", 
+                                   "overlay"),
+                       selected = "group")
         }
       })
         output$arrayAndAntennaPickerUI <- renderUI({
@@ -226,12 +228,12 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           movYaxis = "y1"
           envYaxis = "y2"
           primaryYaxisName = "Detection Data (Daily Counts)"
-          SecondaryYaxisName = "Discharge"
+          SecondaryYaxisName = "Discharge (cfs)"
           
         } else{
           movYaxis = "y2"
           envYaxis = "y1"
-          primaryYaxisName = "Discharge"
+          primaryYaxisName = "Discharge (cfs)"
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
@@ -244,19 +246,25 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
                                   color = ~`Antenna or Status`,
                                   #colors = allColors,
                                   hoverinfo = "text",
-                                  text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n))
+                                  text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n), 
+                                  type = input$statusDisplayOption
+                                  )
         #additional args if status diplsay option is available
-        if (!isTruthy(input$statusDisplayOption) | input$DetectionSelect != "Status") {
-          detectionDataArgs$type = "bar"
-        } else {
-          detectionDataArgs$type = as.character(input$statusDisplayOption)
-          #add desired line plot args if the type is scatter
-          if(input$statusDisplayOption == "scatter"){
-            detectionDataArgs$connectgaps = TRUE
-            detectionDataArgs$mode = "lines+markers"
-          }
+        if(input$statusDisplayOption == "scatter"){
+          detectionDataArgs$connectgaps = TRUE
+          detectionDataArgs$mode = "lines+markers"
         }
-        print(paste("is tructhy status diplsy option: ", isTruthy(input$statusDisplayOption)))
+        # if (!isTruthy(input$statusDisplayOption) | input$DetectionSelect != "Status") {
+        #   detectionDataArgs$type = "bar"
+        # } else {
+        #   detectionDataArgs$type = as.character(input$statusDisplayOption)
+        #   #add desired line plot args if the type is scatter
+        #   if(input$statusDisplayOption == "scatter"){
+        #     detectionDataArgs$connectgaps = TRUE
+        #     detectionDataArgs$mode = "lines+markers"
+        #   }
+        # }
+        #print(paste("is tructhy status diplsy option: ", isTruthy(input$statusDisplayOption)))
 
           p <- p %>%
             add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
