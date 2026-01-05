@@ -10,71 +10,17 @@ library(readxl)
 library(shinycssloaders) #withSpinner
 library(DT)
 library(shinyWidgets) # for pickerInputs
-antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
-#detections_20251216 <- read_csv("data/detections_20251216.csv")
-detections <- read_excel("data/detections_20251216.xlsx", 
-                         col_types = c("text", "text", "date", 
-              "numeric", "text", "numeric"))
-Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
-                               col_types = c("date", "text", "numeric", 
-                                             "text", "numeric", "numeric", "numeric", 
-                                             "numeric", "numeric", "numeric", 
-                                             "numeric", "numeric", "numeric", 
-                                             "numeric"))
 
-antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
-antennasSF <- antennasSFAll %>%
-  distinct(geometry, .keep_all = TRUE)
-
+combinedDetectionAndStatusData <- readRDS("data/flatFilesforApp/combinedDetectionAndStatusData.rds")
+USGSFlows <- readRDS("data/flatFilesforApp/USGSFlows.rds")
+antennasSF <- readRDS("data/flatFilesforApp/antennasSF.rds")
+qaqcData <- readRDS("data/flatFilesforApp/qaqcData.rds")
 
 for (i in list.files("./modules/")) {
   if (grepl(".R", i)) {
     source(paste0("./modules/",i))
   }
 }
-neededFunctions <- c("getDailyand15MinUSGSData.R", "getStatusFunction.R")
-
-for (i in neededFunctions) {
-  source(paste0("./functions/",i))
-}
-
-
-studyStartDate <- min(date(detections$detected))
-
-USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
-
-###Data Wrangling
-
-Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
-  select(`Release Date` = Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
-
-detections1 <- detections %>%
-  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
-detectionsAttributesFlows <- detections1 %>%
-  left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
-  )) %>%
-  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
-  mutate(DetectionDate = date(detected)) %>%
-  left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
-  #st_as_sf()
-
-
-#####QAQC
-morethan1dec_tag <- detectionsAttributesFlows %>%
-  distinct(dec_tag, newTag) %>%
-  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
-  filter(`Number of dec_tag Entries` > 1)
-
-moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
-  count(`Full Tag`, name = "Number of 'Full Tag' Entries") %>%
-  filter(`Number of 'Full Tag' Entries` > 1)
-
-detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
-  filter(is.na(`Release Date`))
-
-qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
-                 "moreThan1ReleaseEntry" = moreThan1ReleaseEntry, 
-                 "detectionsWithoutReleaseData" = detectionsWithoutReleaseData)
 
 # NARaw <- detectionsAttributesFlows %>%
 #   st_drop_geometry() %>%
@@ -110,7 +56,7 @@ ui <- fluidPage(
              id = "tabs", 
              theme = shinytheme("journal"), #end of navbar page arguments; what follow is all inside it
              tabPanel("Discharge and Detections", 
-                      environmentalData_UI("environmentalData", detectionsAttributesFlows)
+                      environmentalData_UI("environmentalData", combinedDetectionAndStatusData$detectionsAttributesFlows)
                       ), 
              tabPanel("Map",
                       map_UI("map")
@@ -125,8 +71,8 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, detectionsAttributesFlows)
-    map_Server("map", antennasSF, detectionsAttributesFlows)
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, combinedDetectionAndStatusData)
+    map_Server("map", antennasSF)
     QAQC_Server("qaqc", qaqcData)
     
   })

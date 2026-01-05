@@ -1,0 +1,103 @@
+---
+title: "createFlatFilesRunscript"
+author: "Sam Graf"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+whole_doc_startTime <- Sys.time()
+
+library(tidyverse)
+library(dataRetrieval)
+library(readxl)
+library(sf)
+
+neededFunctions <- c("getDailyand15MinUSGSData.R", "getStatusFunction.R")
+
+for (i in neededFunctions) {
+  source(paste0("./functions/",i))
+}
+
+antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
+#detections_20251216 <- read_csv("data/detections_20251216.csv")
+detections <- read_excel("data/detections_20251216.xlsx", 
+                         col_types = c("text", "text", "date", 
+              "numeric", "text", "numeric"))
+Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
+                               col_types = c("date", "text", "numeric", 
+                                             "text", "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric", "numeric", "numeric", 
+                                             "numeric"))
+
+antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
+antennasSF <- antennasSFAll %>%
+  distinct(geometry, .keep_all = TRUE)
+```
+
+
+
+```{r USGS, include=FALSE, echo=FALSE}
+studyStartDate <- min(date(detections$detected))
+
+USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
+
+###Data Wrangling
+
+Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
+  select(`Release Date` = Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
+
+detections1 <- detections %>%
+  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
+detectionsAttributesFlows <- detections1 %>%
+  left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
+  )) %>%
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+  mutate(DetectionDate = date(detected)) %>%
+  left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
+  #st_as_sf()
+
+dailyStatus <- getStatusFunction(detectionsAttributesFlows)
+
+combinedDetectionAndStatusData <- list(
+  "detectionsAttributesFlows" = detectionsAttributesFlows,
+  "dailyStatus" = dailyStatus
+)
+
+#####QAQC
+morethan1dec_tag <- detectionsAttributesFlows %>%
+  distinct(dec_tag, newTag) %>%
+  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
+  filter(`Number of dec_tag Entries` > 1)
+
+moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
+  count(`Full Tag`, name = "Number of 'Full Tag' Entries") %>%
+  filter(`Number of 'Full Tag' Entries` > 1)
+
+detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
+  filter(is.na(`Release Date`))
+
+qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
+                 "moreThan1ReleaseEntry" = moreThan1ReleaseEntry, 
+                 "detectionsWithoutReleaseData" = detectionsWithoutReleaseData)
+```
+
+
+```{r savingFiles, echo=FALSE, include=TRUE}
+allFlatFiles <- list(
+  "combinedDetectionAndStatusData" = combinedDetectionAndStatusData, 
+  "USGSFlows" = USGSFlows,
+  "antennasSF" = antennasSF,
+  "qaqcData" = qaqcData
+)
+
+for(filename in names(allFlatFiles)){
+  saveRDS(allFlatFiles[[filename]], paste0("data/flatFilesforApp/", filename, ".rds"))
+}
+
+whole_doc_endTime <- Sys.time()
+
+```
+
+## `r paste("The whole document took", round(difftime(whole_doc_endTime, whole_doc_startTime, units = "mins"),2), "minutes to run.  Flat Files are saved to the flat files directory and the app is ready to run with the most updated data.")`

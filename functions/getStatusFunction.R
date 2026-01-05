@@ -1,11 +1,13 @@
 detectionData <- detectionsAttributesFlows
+#funciton gets the "Status" of a fish based off the last array they ended the day on
+#as of 1/5 2025 it's applied to all data and the static file is used in the app
 
 getStatusFunction <- function(detectionData) {
   
   #remove duplicate detection rows: most tags don't have this but one tag (12/29/2025) was detected same timestamp on dif antennas 
   #throws off first/last if timestamps were both first or last of the day
   #989.00104049961897 for example
-  #specific antenna detected doesn't particlaruly matter when were calculating movemnts/how many fish stayed above/below study area
+  #specific antenna detected doesn't particularly matter when were calculating movements/how many fish stayed above/below study area
   detectionDataDistinct <- detectionData %>%
     distinct(dec_tag, detected, antennaName, .keep_all = TRUE)
   
@@ -87,7 +89,7 @@ getStatusFunction <- function(detectionData) {
     #first arg is group so group by new tag, then next arg is column you have to fill in. Must be present in data
     tidyr::complete(newTag, StatusDate = seq.Date(
       from = min(StatusDate),
-      to   = max(x1$StatusDate),
+      to   = max(StatusDate),
       by   = "day"
     )
     )
@@ -118,7 +120,8 @@ getStatusFunction <- function(detectionData) {
     mutate(Flow = coalesce(Flow.x, Flow.y), 
            `TL 1st Enc. (mm)` = coalesce(`TL 1st Enc. (mm).x`, `TL 1st Enc. (mm).y`), 
            SPP = coalesce(SPP.x, SPP.y), 
-           `Release Date` = coalesce(`Release Date.x`, `Release Date.y`))
+           `Release Date` = coalesce(`Release Date.x`, `Release Date.y`)) %>%
+    select(names(detectionData), `preStudyStatus`, `Study Area Status`)
   
   return(allTagsStatusDfFilledAttributesCleaned)
 }

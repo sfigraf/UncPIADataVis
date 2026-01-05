@@ -72,7 +72,7 @@ environmentalData_UI <- function(id, detectionData) {
   )
 }
 
-environmentalData_Server <- function(id, USGSData, detectionData) {
+environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusData) {
   moduleServer(
     id,
     function(input, output, session) {
@@ -81,10 +81,23 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
       plotTitle <- reactiveVal("")
 
 # data filtering ----------------------------------------------------------
+      #decide which data to use
+      if (input$DetectionSelect == "Total Detections") {
+        detectionData <- combinedDetectionAndStatusData$detectionsAttributesFlows
+        dateColumnToFilter <- "DetectionDate"
+      } else {
+        detectionData <- combinedDetectionAndStatusData$dailyStatus
+        dateColumnToFilter <- "StatusDate"
+        
+      }
+      
+      print(detectionData)
 
       
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
+        
+        #print(dateColumnToFilter)
         
         #validate(need(isTruthy(input$sliderDischarge)))
         
@@ -96,7 +109,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           
           detectionDatafiltered <- detectionData %>%
             filter(newTag %in% trimws(input$textinput3),
-                   DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2],
+                   DetectionDate >= input$slider2[1] & DetectionDate <= input$slider2[2], #.data[[dateColumnToFilter]]
                    antennaName %in% c(input$arrayPicker),
                    antenna %in% c(input$picker7),
                    SPP %in% c(input$picker10),
@@ -126,15 +139,16 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
           detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate, `Antenna or Status` = antennaName)
           
-          allDataToDisplay <- detectionDatafiltered
           
         } else{
-          dailyStatus <- getStatusFunction(detectionDatafiltered)
-          detectionCountDataToDisplay <- dailyStatus %>%
+          # dailyStatus <- getStatusFunction(detectionDatafiltered)
+          detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
           
-          allDataToDisplay <- dailyStatus
+          
         }
+        
+        #allDataToDisplay <- detectionDatafiltered
         
         USGSFiltered <- USGSData %>%
           dplyr::filter(
@@ -143,7 +157,7 @@ environmentalData_Server <- function(id, USGSData, detectionData) {
         
         
         dataList <- list("detectionCountDataToDisplay"= detectionCountDataToDisplay,
-                         "allDataToDisplay" = allDataToDisplay, 
+                         "allDataToDisplay" = detectionDatafiltered, 
                          "USGSFiltered" = USGSFiltered)
         return(dataList)
       })

@@ -8,7 +8,7 @@ map_UI <- function(id) {
   )
 }
 
-map_Server <- function(id, antennasSF, detectionsSF) {
+map_Server <- function(id, antennasSF) { #detectionsSF
   moduleServer(
     id,
     function(input, output, session) {
