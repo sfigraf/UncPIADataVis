@@ -301,3 +301,16 @@ difsstatusnew <- anti_join(dailyStatus1, `statusData3_2026-01-05`)
 
 x <- dailyStatus1 %>%
   filter(is.na(`antenna`))
+
+###trobeshooting a buit
+dailyStatus1 <- combinedDetectionAndStatusData$dailyStatus
+x1 <- dailyStatus1 %>%
+  
+  count(preStudyStatus)
+x <- dailyStatus1 %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+
+x2 <- dailyStatus1 %>%
+  distinct(.keep_all = TRUE) %>%
+  filter(StatusDate == "2025-11-11" ) %>% #& StatusDate <= "2025-11-12" 
+  count(newTag)

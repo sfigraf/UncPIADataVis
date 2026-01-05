@@ -121,7 +121,9 @@ getStatusFunction <- function(detectionData) {
            `TL 1st Enc. (mm)` = coalesce(`TL 1st Enc. (mm).x`, `TL 1st Enc. (mm).y`), 
            SPP = coalesce(SPP.x, SPP.y), 
            `Release Date` = coalesce(`Release Date.x`, `Release Date.y`)) %>%
-    select(StatusDate, names(detectionData), `preStudyStatus`, `Study Area Status`)
+    select(StatusDate, names(detectionData), `preStudyStatus`, `Study Area Status`) %>%
+    #get rid of unnecessary rows, which only occur in this function bc of duplicate tag entries (like the many-many join relationship). Once data is clean this shouldn;t be needed
+    distinct(.keep_all = TRUE)
   
   return(allTagsStatusDfFilledAttributesCleaned)
 }

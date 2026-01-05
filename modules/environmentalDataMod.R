@@ -92,7 +92,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         
       }
       
-      print(paste("nrow before any filters applied:", nrow(detectionData)))
+      #print(paste("nrow before any filters applied:", nrow(detectionData)))
       
 
       
@@ -131,7 +131,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                    antenna %in% c(input$picker7)
                    )
         }
-        print(paste("nrow after antennaname fileters:", nrow(detectionDatafiltered)))
+        #print(paste("nrow after antennaname fileters:", nrow(detectionDatafiltered)))
         #filters that apply to all data tables
         detectionDatafiltered <- detectionDatafiltered %>%
           filter(
@@ -142,7 +142,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           arrange(detected)
         
         #detectionDatafiltered
-        print(paste("nrow after all fileters:", nrow(detectionDatafiltered)))
+        #print(paste("nrow after all fileters:", nrow(detectionDatafiltered)))
         
         
         #if raw counts button presed, display counts
