@@ -269,9 +269,11 @@ input <- list(
   picker10 = unique(detectionData1$SPP), 
   arrayPicker = unique(detectionData1$antennaName),
   picker7 = unique(detectionData1$antenna), 
-  slider10 = c(min(as.numeric(detectionData1$`TL 1st Enc. (mm)`), na.rm = TRUE), max(detectionData1$`TL 1st Enc. (mm)`, na.rm = TRUE))
+  slider10 = c(min(as.numeric(detectionData1$`TL 1st Enc. (mm)`), na.rm = TRUE), max(detectionData1$`TL 1st Enc. (mm)`, na.rm = TRUE)), 
+  
 )
 dateColumnToFilter <- "StatusDate"
+dailyStatus1 <- combinedDetectionAndStatusData$dailyStatus
 detectionDatafiltered <- dailyStatus1  %>% 
   filter(
     .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
@@ -326,3 +328,7 @@ detectionCountDataToDisplay$`Antenna or Status` <-
 allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` <- 
   factor(allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status`,
          levels = statusOptions)
+dateOptions <- unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)
+x <- alldetectionDatafiltered %>%
+  filter(`Release Date` %in% c(dateOptions))
+

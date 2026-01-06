@@ -23,7 +23,6 @@ for (i in list.files("./modules/")) {
 }
 
 ##Color assignment
-#needs to be I for plotly
 USGSLineColor <- setNames("#87CEEB", "USGSLineColor")
 antennaNameOptions <- sort(unique(combinedDetectionAndStatusData$detectionsAttributesFlows$antennaName))
 statusOptions <- sort(unique(combinedDetectionAndStatusData$dailyStatus$`Study Area Status`))
@@ -35,35 +34,6 @@ statusColorsOptions <- c("#A67b5b", "#63BE7B", "#F8696B")
 statusColors <- setNames(statusColorsOptions, statusOptions)
 
 allColors <- c(statusColors, antennaNameColors, USGSLineColor)
-
-# NARaw <- detectionsAttributesFlows %>%
-#   st_drop_geometry() %>%
-#   filter(is.na(SPP)) 
-# 
-# NACounts <- NARaw %>%
-#   count(newTag)
-# 
-# NAs <- NARaw %>%
-#   distinct(newTag, .keep_all = TRUE)
-#str_length("989.00103062026096")
-
-# dailyDetectionData <- detectionsAttributesFlows %>%
-#   count(Date = date(detected), antennaName)
-##########MOVEMENTS
-
-
-# x <- detectionsAttributesFlows %>%
-#   group_by(dec_tag) %>%
-#   arrange(detected) %>%
-#   #filter(dec_tag == "3DD.0078E38638") %>%
-#   mutate(movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
-#                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
-#                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
-#                               antennaName == lag(antennaName) ~ "No Movement",
-#                               TRUE ~ NA
-#                               )
-#                               )
-#   
 
 ui <- fluidPage(
   navbarPage(title = "Uncompahgre Data Exploration",

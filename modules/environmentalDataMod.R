@@ -19,7 +19,7 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                         #animate = animationOptions(interval = 500, loop = FALSE)
             ),
             pickerInput(ns("picker10"),
-                        label = "Select Species Type",
+                        label = "Species Type",
                         choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$SPP)),
                         selected = unique(combinedDetectionAndStatusData$dailyStatus$SPP),
                         multiple = TRUE,
@@ -32,6 +32,15 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                         max = max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),  
                         value = c(min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE), max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE)),
                         step = 1
+            ),
+            pickerInput(ns("releaseDatePicker"),
+                        label = "Release Dates",
+                        choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
+                        selected = as.character(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
+                        multiple = TRUE,
+                        options = list(
+                          `actions-box` = TRUE #this makes the "select/deselect all" option
+                        )
             ),
             uiOutput(ns("arrayAndAntennaPickerUI")), 
             actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
@@ -92,13 +101,8 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         
       }
       
-      #print(paste("nrow before any filters applied:", nrow(detectionData)))
-      
-
-      
       # filter the data
       allDataFiltered <- eventReactive(input$renderButton,ignoreNULL = FALSE,{
-
         
         if(input$textinput3 != ''){
           
@@ -113,16 +117,6 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           
         } else {
           detectionDatafiltered <- detectionData
-          # detectionDatafiltered <- detectionData  %>% 
-          #   filter(
-          #     .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
-          #     
-          #     SPP %in% c(input$picker10),
-          #     `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
-          #     
-          #   ) %>%
-          #   arrange(detected)
-          
          }
         
         if(input$DetectionSelect == "Total Detections"){
@@ -131,20 +125,18 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                    antenna %in% c(input$picker7)
                    )
         }
-        #print(paste("nrow after antennaname fileters:", nrow(detectionDatafiltered)))
+        
         #filters that apply to all data tables
         detectionDatafiltered <- detectionDatafiltered %>%
           filter(
             .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2], 
             SPP %in% c(input$picker10),
-            `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+            `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2], 
+            #have to use as.character for the picker. use slider maybe otherwise idk
+            as.character(`Release Date`) %in% input$releaseDatePicker
           ) %>%
           arrange(detected)
-        
-        #detectionDatafiltered
-        #print(paste("nrow after all fileters:", nrow(detectionDatafiltered)))
-        
-        
+
         #if raw counts button presed, display counts
         if(input$DetectionSelect == "Total Detections"){
           detectionCountDataToDisplay <- detectionDatafiltered %>%
@@ -152,16 +144,9 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           
           
         } else{
-          # dailyStatus <- getStatusFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
         }
-        # #change to factor in the hopes that this gets the color scheme to work
-        # detectionCountDataToDisplay$`Antenna or Status` <- 
-        #   factor(detectionCountDataToDisplay$`Antenna or Status`,
-        #          levels = unique(detectionCountDataToDisplay$`Antenna or Status`))
-        
-        #allDataToDisplay <- detectionDatafiltered
         
         USGSFiltered <- USGSData %>%
           dplyr::filter(
@@ -216,7 +201,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           if(input$DetectionSelect != "Status"){
             tagList(
               pickerInput(ns("arrayPicker"),
-                          label = "Select Array",
+                          label = "Array",
                           choices = sort(unique(detectionData$antennaName)),
                           selected = unique(detectionData$antennaName),
                           multiple = TRUE,
@@ -225,7 +210,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                           )
               ),
               pickerInput(ns("picker7"),
-                          label = "Select Specific Antenna",
+                          label = "Specific Antenna",
                           choices = sort(unique(detectionData$antenna)),
                           selected = unique(detectionData$antenna),
                           multiple = TRUE,
@@ -237,9 +222,6 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
             
           }
         })
-        
-      
-      
 
 # PLOT OUTPUT -------------------------------------------------------------
 
@@ -247,21 +229,20 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
       output$OverlayPlot <- renderPlotly({
         #define plot object 
         p <- plot_ly()
-        #define display parameters
-        #line_color = I("#87CEEB")
+        
         nameOfLine = "USGS Discharge"
       
         if(input$YaxisSelect == "Detections"){
           movYaxis = "y1"
           envYaxis = "y2"
-          primaryYaxisName = paste0(c(input$DetectionSelect, " (Daily Counts)"))
+          primaryYaxisName = paste0(as.character(input$DetectionSelect), " (Daily Counts)")
           SecondaryYaxisName = "Discharge (cfs)"
           
         } else{
           movYaxis = "y2"
           envYaxis = "y1"
           primaryYaxisName = "Discharge (cfs)"
-          SecondaryYaxisName = paste0(c(input$DetectionSelect, " (Daily Counts)"))
+          SecondaryYaxisName = paste0(c(as.character(input$DetectionSelect), " (Daily Counts)"))
         }
         
         ##detection data args
@@ -280,24 +261,14 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           detectionDataArgs$connectgaps = TRUE
           detectionDataArgs$mode = "lines+markers"
         }
-        # if (!isTruthy(input$statusDisplayOption) | input$DetectionSelect != "Status") {
-        #   detectionDataArgs$type = "bar"
-        # } else {
-        #   detectionDataArgs$type = as.character(input$statusDisplayOption)
-        #   #add desired line plot args if the type is scatter
-        #   if(input$statusDisplayOption == "scatter"){
-        #     detectionDataArgs$connectgaps = TRUE
-        #     detectionDataArgs$mode = "lines+markers"
-        #   }
-        # }
-        #print(paste("is tructhy status diplsy option: ", isTruthy(input$statusDisplayOption)))
         #unwrap args defined above 
         #do.call is like saying "apply this function ("Add_trace()") using these arguments
         #helpful when sometimes you need to add or change arguments. detectionDataArgs doesn't stay the same
         #adding the plot p as an argument that needs to be passed as well with list(p = p)
+        #for assigning color purposes with allCOlor, this part has to be the first trace
         p <- do.call(add_trace, c(list(p = p), detectionDataArgs))
 
-          p <- p %>%
+        p <- p %>%
             add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
                       y = ~Flow,
                       name = nameOfLine,
@@ -323,8 +294,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
       })
       
       output$countsDataTable <- renderDT({
-        # detectionDataNoSF <- allDataFiltered()$detectionCountDataToDisplay #%>%
-        #   #st_drop_geometry()
+        
         datatable(allDataFiltered()$detectionCountDataToDisplay,
                   rownames = FALSE,
                   extensions = c('Buttons'),
@@ -340,10 +310,8 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
       
       downloadData_Server("downloadCountsDataTable", allDataFiltered()$detectionCountDataToDisplay, "countsData")
       
-      
       output$allDataTable <- renderDT({
-        # detectionDataNoSF <- allDataFiltered()$detectionCountDataToDisplay #%>%
-        #   #st_drop_geometry()
+        
         datatable(allDataFiltered()$allDataToDisplay,
                   rownames = FALSE,
                   extensions = c('Buttons'),
