@@ -28,10 +28,10 @@ USGSLineColor <- setNames("#87CEEB", "USGSLineColor")
 antennaNameOptions <- sort(unique(combinedDetectionAndStatusData$detectionsAttributesFlows$antennaName))
 statusOptions <- sort(unique(combinedDetectionAndStatusData$dailyStatus$`Study Area Status`))
 
-antennaNameColorsOptions <- c("#F5F5F5", "#F8696B", "#63BE7B")
+antennaNameColorsOptions <- c("#A67b5b", "#F8696B", "#63BE7B")
 antennaNameColors <- setNames(antennaNameColorsOptions, antennaNameOptions)
 
-statusColorsOptions <- c("#F5F5F5", "#63BE7B", "#F8696B")
+statusColorsOptions <- c("#A67b5b", "#63BE7B", "#F8696B")
 statusColors <- setNames(statusColorsOptions, statusOptions)
 
 allColors <- c(statusColors, antennaNameColors, USGSLineColor)

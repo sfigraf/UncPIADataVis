@@ -254,14 +254,14 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         if(input$YaxisSelect == "Detections"){
           movYaxis = "y1"
           envYaxis = "y2"
-          primaryYaxisName = "Detection Data (Daily Counts)"
+          primaryYaxisName = paste0(c(input$DetectionSelect, " (Daily Counts)"))
           SecondaryYaxisName = "Discharge (cfs)"
           
         } else{
           movYaxis = "y2"
           envYaxis = "y1"
           primaryYaxisName = "Discharge (cfs)"
-          SecondaryYaxisName = "Detection Data (Daily Counts)"
+          SecondaryYaxisName = paste0(c(input$DetectionSelect, " (Daily Counts)"))
         }
         
         ##detection data args
