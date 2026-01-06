@@ -314,3 +314,15 @@ x2 <- dailyStatus1 %>%
   distinct(.keep_all = TRUE) %>%
   filter(StatusDate == "2025-11-11" ) %>% #& StatusDate <= "2025-11-12" 
   count(newTag)
+
+###########
+detectionCountDataToDisplay <- combinedDetectionAndStatusData$dailyStatus %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+
+detectionCountDataToDisplay$`Antenna or Status` <- 
+  factor(detectionCountDataToDisplay$`Antenna or Status`,
+         levels = unique(detectionCountDataToDisplay$`Antenna or Status`))
+
+allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` <- 
+  factor(allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status`,
+         levels = statusOptions)

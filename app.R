@@ -22,6 +22,20 @@ for (i in list.files("./modules/")) {
   }
 }
 
+##Color assignment
+#needs to be I for plotly
+USGSLineColor <- setNames("#87CEEB", "USGSLineColor")
+antennaNameOptions <- sort(unique(combinedDetectionAndStatusData$detectionsAttributesFlows$antennaName))
+statusOptions <- sort(unique(combinedDetectionAndStatusData$dailyStatus$`Study Area Status`))
+
+antennaNameColorsOptions <- c("#F5F5F5", "#F8696B", "#63BE7B")
+antennaNameColors <- setNames(antennaNameColorsOptions, antennaNameOptions)
+
+statusColorsOptions <- c("#F5F5F5", "#63BE7B", "#F8696B")
+statusColors <- setNames(statusColorsOptions, statusOptions)
+
+allColors <- c(statusColors, antennaNameColors, USGSLineColor)
+
 # NARaw <- detectionsAttributesFlows %>%
 #   st_drop_geometry() %>%
 #   filter(is.na(SPP)) 
@@ -71,7 +85,7 @@ ui <- fluidPage(
 server <- function(input, output) {
   
   observe({
-    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, combinedDetectionAndStatusData)
+    environmentalData_Server("environmentalData", USGSFlows$USGSDataDaily, combinedDetectionAndStatusData, allColors)
     map_Server("map", antennasSF)
     QAQC_Server("qaqc", qaqcData)
     

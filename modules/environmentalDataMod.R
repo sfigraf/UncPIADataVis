@@ -73,7 +73,7 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
   )
 }
 
-environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusData) {
+environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusData, allColors) {
   moduleServer(
     id,
     function(input, output, session) {
@@ -155,9 +155,11 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           # dailyStatus <- getStatusFunction(detectionDatafiltered)
           detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
-          
-          
         }
+        # #change to factor in the hopes that this gets the color scheme to work
+        # detectionCountDataToDisplay$`Antenna or Status` <- 
+        #   factor(detectionCountDataToDisplay$`Antenna or Status`,
+        #          levels = unique(detectionCountDataToDisplay$`Antenna or Status`))
         
         #allDataToDisplay <- detectionDatafiltered
         
@@ -246,7 +248,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         #define plot object 
         p <- plot_ly()
         #define display parameters
-        line_color = I("#87CEEB")
+        #line_color = I("#87CEEB")
         nameOfLine = "USGS Discharge"
       
         if(input$YaxisSelect == "Detections"){
@@ -262,14 +264,13 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           SecondaryYaxisName = "Detection Data (Daily Counts)"
         }
         
-        
         ##detection data args
         #base args that won't change
         detectionDataArgs <- list(data = allDataFiltered()$detectionCountDataToDisplay, x = ~DetectionDate, y = ~n,
                                   inherit = FALSE,
                                   yaxis = movYaxis,
                                   color = ~`Antenna or Status`,
-                                  #colors = allColors,
+                                  colors = allColors,
                                   hoverinfo = "text",
                                   text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n), 
                                   type = input$statusDisplayOption
@@ -290,12 +291,17 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         #   }
         # }
         #print(paste("is tructhy status diplsy option: ", isTruthy(input$statusDisplayOption)))
+        #unwrap args defined above 
+        #do.call is like saying "apply this function ("Add_trace()") using these arguments
+        #helpful when sometimes you need to add or change arguments. detectionDataArgs doesn't stay the same
+        #adding the plot p as an argument that needs to be passed as well with list(p = p)
+        p <- do.call(add_trace, c(list(p = p), detectionDataArgs))
 
           p <- p %>%
             add_trace(data = allDataFiltered()$USGSFiltered, x = ~Date,
                       y = ~Flow,
                       name = nameOfLine,
-                      color = line_color, 
+                      color = I(allColors[["USGSLineColor"]]), 
                       type = "scatter",
                       yaxis = envYaxis,
                       connectgaps = TRUE,
@@ -310,11 +316,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                    yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
                    yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
                                  showgrid = FALSE))
-          #unwrap args defined above 
-          #do.call is like saying "apply this function ("Add_trace()") using these arguments
-          #helpful when sometimes you need to add or change arguments. detectionDataArgs doesn't stay the same
-          #adding the plot p as an argument that needs to be passed as well with list(p = p)
-          p <- do.call(add_trace, c(list(p = p), detectionDataArgs))
+          
           #display layered plot
           p
         
