@@ -4,10 +4,10 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
   tagList(
     fluidRow(
       column(width = 4,
-             wellPanel(
-               tabsetPanel(
-                 tabPanel(
-                   "Data Filters",
+             tabsetPanel(
+               tabPanel(
+                 "Data Filters",
+                 wellPanel(
                    textInput(ns("textinput3"), label = "Filter by Tag"),
                    #filters by maxing what is in the detection file
                    sliderInput(ns("slider2"), "Date",
@@ -46,9 +46,10 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                    uiOutput(ns("arrayAndAntennaPickerUI")), 
                    actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
                    h6("Note: entries with NA values in any of the filter fields are excluded from the results")
-                 ),
-                 tabPanel("Display Options", 
-                          
+                 )
+               ),
+               tabPanel("Display Options", 
+                        wellPanel(
                           radioButtons(ns("DetectionSelect"), 
                                        "Data Display",
                                        choices = c("Total Detections", 
@@ -67,10 +68,9 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                                                    "Discharge"),
                                        selected = "Detections"),
                           uiOutput(ns("barDisplayOptionUI"))
-                          
-                 )
+                        )
                )
-             ), 
+             ),
              uiOutput(ns("dynamicSidebarText")),
       ),
       column(width = 8, 
