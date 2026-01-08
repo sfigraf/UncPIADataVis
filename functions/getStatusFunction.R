@@ -28,22 +28,17 @@ getStatusFunction <- function(detectionData) {
     #989.002028176951
     #filter(dec_tag == "3DD.0078E38638") %>% 0078E385C1
     mutate(
-      # movement = case_when(str_detect(antennaName, c("Downstream")) & str_detect(lag(antennaName), c("Upstream")) ~ "Downstream Movement", 
-      #                           str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
-      #                           antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
-      #                           antennaName == lag(antennaName) ~ "No Movement",
-      #                           is.na(lag(antennaName)) ~ "First Antenna Detection",
-      #                           TRUE ~ NA), 
-           #status of if a fish is in the study area or not
-           #if there is no previous antena name, it's the first of the detections and the fish is inside the study area
-           `Study Area Status` = case_when(is.na(lag(antennaName)) | str_detect(antennaName, c("Upstream")) ~ "Inside study area", 
-                             str_detect(antennaName, c("Downstream")) ~"Outside study area",
-                             antennaName == "Cow Creek Antenna" ~ "In Cow Creek",
-                             TRUE ~ NA
-           )
-           #detectionDate = date(detected)
-           # long = st_coordinates(detectionsSF)[row_number(),1], 
-           # lat = st_coordinates(detectionsSF)[row_number(),2]
+      
+      #status of if a fish is in the study area or not
+      #if there is no previous antena name, it's the first of the detections and the fish is inside the study area
+      `Study Area Status` = case_when(is.na(lag(antennaName)) | str_detect(antennaName, c("Upstream")) ~ "Inside study area", 
+                                      str_detect(antennaName, c("Downstream")) ~"Outside study area",
+                                      antennaName == "Cow Creek Antenna" ~ "In Cow Creek",
+                                      TRUE ~ NA
+      )
+      
+      # long = st_coordinates(detectionsSF)[row_number(),1], 
+      # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
   #find first detection after release
   #MAYBE CHANGE TO JOIN ON NEWTAG ONCE RELEASE DATA IS CLEANER
@@ -128,11 +123,3 @@ getStatusFunction <- function(detectionData) {
   return(allTagsStatusDfFilledAttributesCleaned)
 }
 
-#difs 
-# statusLastOfDayCompare <- statusLastOfDay %>%
-#   count(dec_tag)
-# statusDfCounts <- statusDf %>%
-#   count(dec_tag)
-#   #anti_join(statusLastOfDayCompare)
-# difs <- statusLastOfDayCompare %>%
-#   anti_join(statusDfCounts)
