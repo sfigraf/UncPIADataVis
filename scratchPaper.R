@@ -319,7 +319,9 @@ x2 <- dailyStatus1 %>%
 
 ###########
 detectionCountDataToDisplay <- combinedDetectionAndStatusData$dailyStatus %>%
-  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) %>%
+  group_by(DetectionDate) %>%
+  mutate(Dailypercent = round(n / sum(n) * 100, 2))
 
 detectionCountDataToDisplay$`Antenna or Status` <- 
   factor(detectionCountDataToDisplay$`Antenna or Status`,

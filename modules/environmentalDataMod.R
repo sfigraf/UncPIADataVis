@@ -2,80 +2,82 @@
 environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
   ns <- NS(id)
   tagList(
-    sidebarLayout(
-      tabsetPanel(
-        tabPanel(
-          "Data Filters",
-          sidebarPanel(
-            textInput(ns("textinput3"), label = "Filter by Tag"),
-            #filters by maxing what is in the detection file
-            sliderInput(ns("slider2"), "Date",
-                        min = min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
-                        max = max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1),  
-                        value = c(min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
-                                  max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1)),
-                        step = 1,
-                        timeFormat = "%d %b %y",
-                        #animate = animationOptions(interval = 500, loop = FALSE)
-            ),
-            pickerInput(ns("picker10"),
-                        label = "Species Type",
-                        choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$SPP)),
-                        selected = unique(combinedDetectionAndStatusData$dailyStatus$SPP),
-                        multiple = TRUE,
-                        options = list(
-                          `actions-box` = TRUE #this makes the "select/deselect all" option
-                        )
-            ), #end of picker 10 
-            sliderInput(ns("slider10"), "Fish Release Length",
-                        min = min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),
-                        max = max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),  
-                        value = c(min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE), max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE)),
-                        step = 1
-            ),
-            pickerInput(ns("releaseDatePicker"),
-                        label = "Release Dates",
-                        choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
-                        selected = as.character(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
-                        multiple = TRUE,
-                        options = list(
-                          `actions-box` = TRUE #this makes the "select/deselect all" option
-                        )
-            ),
-            uiOutput(ns("arrayAndAntennaPickerUI")), 
-            actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
-            h6("Note: entries with NA values in any of the filter fields are excluded from the results")
-            
-          )
-          
-        ), 
-        tabPanel("Display Options", 
-                 sidebarPanel(
-                   radioButtons(ns("DetectionSelect"), 
-                                "Data Display",
-                                choices = c("Total Detections", 
-                                            "Status"),
-                                selected = "Total Detections"),
-                   h6("'Status' refers to the last detected array of the day for an individual tag"),
-                   radioButtons(ns("statusDisplayOption"), 
-                                "Display Type",
-                                choices = c("Bar" = "bar", 
-                                            "Line" = "scatter"),
-                                selected = "bar"),
-                   
-                   radioButtons(ns("YaxisSelect"), 
-                                "Primary Y Axis Data",
-                                choices = c("Detections", 
-                                            "Discharge"),
-                                selected = "Detections"),
-                   uiOutput(ns("barDisplayOptionUI"))
-                   
-                   
-                 ) 
+    fluidRow(
+      column(width = 4,
+             wellPanel(
+               tabsetPanel(
+                 tabPanel(
+                   "Data Filters",
+                   textInput(ns("textinput3"), label = "Filter by Tag"),
+                   #filters by maxing what is in the detection file
+                   sliderInput(ns("slider2"), "Date",
+                               min = min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
+                               max = max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1),  
+                               value = c(min(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate -1),
+                                         max(combinedDetectionAndStatusData$detectionsAttributesFlows$DetectionDate +1)),
+                               step = 1,
+                               timeFormat = "%d %b %y",
+                               #animate = animationOptions(interval = 500, loop = FALSE)
+                   ),
+                   pickerInput(ns("picker10"),
+                               label = "Species Type",
+                               choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$SPP)),
+                               selected = unique(combinedDetectionAndStatusData$dailyStatus$SPP),
+                               multiple = TRUE,
+                               options = list(
+                                 `actions-box` = TRUE #this makes the "select/deselect all" option
+                               )
+                   ), #end of picker 10 
+                   sliderInput(ns("slider10"), "Fish Release Length",
+                               min = min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),
+                               max = max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE),  
+                               value = c(min(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE), max(combinedDetectionAndStatusData$dailyStatus$`TL 1st Enc. (mm)`, na.rm = TRUE)),
+                               step = 1
+                   ),
+                   pickerInput(ns("releaseDatePicker"),
+                               label = "Release Dates",
+                               choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
+                               selected = as.character(unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)),
+                               multiple = TRUE,
+                               options = list(
+                                 `actions-box` = TRUE #this makes the "select/deselect all" option
+                               )
+                   ),
+                   uiOutput(ns("arrayAndAntennaPickerUI")), 
+                   actionButton(ns("renderButton"), label = "Render Data", width = "100%"), 
+                   h6("Note: entries with NA values in any of the filter fields are excluded from the results")
+                 ),
+                 tabPanel("Display Options", 
+                          
+                          radioButtons(ns("DetectionSelect"), 
+                                       "Data Display",
+                                       choices = c("Total Detections", 
+                                                   "Status"),
+                                       selected = "Total Detections"),
+                          h6("'Status' refers to the last detected array of the day for an individual tag"),
+                          radioButtons(ns("statusDisplayOption"), 
+                                       "Display Type",
+                                       choices = c("Bar" = "bar", 
+                                                   "Line" = "scatter"),
+                                       selected = "bar"),
+                          
+                          radioButtons(ns("YaxisSelect"), 
+                                       "Primary Y Axis Data",
+                                       choices = c("Detections", 
+                                                   "Discharge"),
+                                       selected = "Detections"),
+                          uiOutput(ns("barDisplayOptionUI"))
+                          
                  )
+               )
+             ), 
+             uiOutput(ns("dynamicSidebarText")),
       ),
-      mainPanel(
-        uiOutput(ns("mainPanelUI")),
+      column(width = 8, 
+             
+             wellPanel(
+               uiOutput(ns("mainPanelUI")),
+             )
       )
     )
     
@@ -146,7 +148,13 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         } else{
           detectionCountDataToDisplay <- detectionDatafiltered %>%
             count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+            
         }
+        
+        detectionCountDataToDisplay <- detectionCountDataToDisplay %>%
+          group_by(DetectionDate) %>%
+          mutate(Dailypercent = round(n / sum(n) * 100, 2)) %>%
+          ungroup()
         
         USGSFiltered <- USGSData %>%
           dplyr::filter(
@@ -222,6 +230,10 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
             
           }
         })
+        
+        output$dynamicSidebarText <- renderUI({
+          h3("test text")
+        })
 
 # PLOT OUTPUT -------------------------------------------------------------
 
@@ -253,7 +265,9 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                                   color = ~`Antenna or Status`,
                                   colors = allColors,
                                   hoverinfo = "text",
-                                  text = ~paste('Date: ', as.character(DetectionDate), '<br>N: ', n), 
+                                  text = ~paste0('Date: ', as.character(DetectionDate),
+                                                '<br>N: ', n, 
+                                                '<br>Daily Percentage of total: ', Dailypercent, "%"), 
                                   type = input$statusDisplayOption
                                   )
         #additional args if status diplsay option is available
