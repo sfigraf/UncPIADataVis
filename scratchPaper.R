@@ -334,3 +334,6 @@ dateOptions <- unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)
 x <- alldetectionDatafiltered %>%
   filter(`Release Date` %in% c(dateOptions))
 
+x <- detectionCountDataToDisplay[,c("DetectionDate" =="2025-11-11")]
+detectionCountDataToDisplay$n[detectionCountDataToDisplay$DetectionDate == "2025-11-11"
+                              & detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"]

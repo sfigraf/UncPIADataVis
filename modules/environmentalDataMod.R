@@ -71,7 +71,7 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                         )
                )
              ),
-             uiOutput(ns("dynamicSidebarText")),
+             uiOutput(ns("statusSummaryText")),
       ),
       column(width = 8, 
              
@@ -153,7 +153,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         
         detectionCountDataToDisplay <- detectionCountDataToDisplay %>%
           group_by(DetectionDate) %>%
-          mutate(Dailypercent = round(n / sum(n) * 100, 2)) %>%
+          mutate(dailyPercent = round(n / sum(n) * 100, 2)) %>%
           ungroup()
         
         USGSFiltered <- USGSData %>%
@@ -231,8 +231,29 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
           }
         })
         
-        output$dynamicSidebarText <- renderUI({
-          h3("test text")
+        output$statusSummaryText <- renderUI({
+          if(input$DetectionSelect == "Status"){
+            
+            displayText <- paste0("On ", min(allDataFiltered()$detectionCountDataToDisplay$DetectionDate), ", there were an estimated ", 
+                                  allDataFiltered()$detectionCountDataToDisplay$n[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == min(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"], " fish outside the study area for the selected filters, representing ", 
+                                  allDataFiltered()$detectionCountDataToDisplay$dailyPercent[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == min(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                                  & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"], "% of selected/filtered fish. 
+                                  
+                                  On ", max(allDataFiltered()$detectionCountDataToDisplay$DetectionDate), ", there were an estimated ", 
+                                  allDataFiltered()$detectionCountDataToDisplay$n[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == max(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                                  & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"], " fish outside the study area for the selected filters, representing ", 
+                                  allDataFiltered()$detectionCountDataToDisplay$dailyPercent[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == max(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                                             & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"], "% of selected/filtered fish.
+                                  
+                                  This represents a change of ", round(allDataFiltered()$detectionCountDataToDisplay$dailyPercent[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == max(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                                                                            & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"] - 
+                                    allDataFiltered()$detectionCountDataToDisplay$dailyPercent[allDataFiltered()$detectionCountDataToDisplay$DetectionDate == min(allDataFiltered()$detectionCountDataToDisplay$DetectionDate)
+                                                                                                                            & allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"], 2), 
+                                  "% across ", difftime(max(allDataFiltered()$detectionCountDataToDisplay$DetectionDate), min(allDataFiltered()$detectionCountDataToDisplay$DetectionDate), units = "days"), " days."
+                                  )
+            h5(displayText)
+          }
         })
 
 # PLOT OUTPUT -------------------------------------------------------------
@@ -267,7 +288,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
                                   hoverinfo = "text",
                                   text = ~paste0('Date: ', as.character(DetectionDate),
                                                 '<br>N: ', n, 
-                                                '<br>Daily Percentage of total: ', Dailypercent, "%"), 
+                                                '<br>Daily Percentage of total: ', dailyPercent, "%"), 
                                   type = input$statusDisplayOption
                                   )
         #additional args if status diplsay option is available
