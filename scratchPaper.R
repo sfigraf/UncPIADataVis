@@ -43,9 +43,9 @@ detectionsSF <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
   left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) 
-
-detectionsFIrstLast <- detectionsSF %>%
-  group_by(dec_tag, date(detected)) %>%
+detectionsAttributesFlows
+detectionsFIrstLast <- detectionData %>%
+  group_by(dec_tag, DetectionDate) %>%
   arrange(detected) %>%
   mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
                                 detected == max(detected) ~ "Last_of_day",
@@ -61,12 +61,48 @@ dailyMovementsTableAll <- detectionsFIrstLast %>%
                               str_detect(antennaName, c("Upstream")) & str_detect(lag(antennaName), c("Downstream")) ~ "Upstream Movement", 
                               antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
                               antennaName == lag(antennaName) ~ "No Movement",
+                              is.na(lag(antennaName)) ~ "First Antenna Detection",
                               TRUE ~ NA), 
-         detectionDate = date(detected)
+         #states of if a fish is in the study area or not
+         #if there is no previous antena name, it's the first of the detections and the fish is inside the study area
+         State = case_when(is.na(lag(antennaName)) | str_detect(antennaName, c("Upstream")) ~ "Inside study area", 
+                           str_detect(antennaName, c("Downstream")) ~"Outside study area",
+                           antennaName == "Cow Creek Antenna" ~ "Cow Creek Detection",
+                           TRUE ~ NA
+                           #if the fish's last antenna was US antenna, it's inside the study area
+                           )
+         #detectionDate = date(detected)
          # long = st_coordinates(detectionsSF)[row_number(),1], 
          # lat = st_coordinates(detectionsSF)[row_number(),2]
-  ) #%>%
-  #st_drop_geometry()
+  )
+
+
+
+filteredData <- dailyMovementsTableAll %>%
+  ungroup() %>%
+  filter(first_last == "Last_of_day")
+filteredDataAll <- filteredData %>%
+  filter(DetectionDate == as.Date("2025-11-15"), 
+         State == "Outside study area")
+filteredDataDistinct <- filteredData %>%
+  distinct(newTag, DetectionDate, .keep_all = T) %>%
+  filter(DetectionDate == as.Date("2025-11-15"), 
+         State == "Outside study area")
+
+tagDifs <- anti_join(filteredDataAll, filteredDataDistinct, by = "newTag" )
+
+studyAreaCounts <- filteredData %>%
+  count(DetectionDate, State)
+  #get number of fish that had a downstream movement on the end of the day (aka ended the day outside the study area)
+  #compare that to total number of fish tagged
+
+###tags with more than 1 dec_tag
+morethan1dec_tag <- detectionsAttributesFlows %>%
+  distinct(dec_tag, newTag) %>%
+  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
+  filter(`Number of dec_tag Entries` > 1)
+
+
 
 dailyMovementsTablemoveOnly <- dailyMovementsTableAll %>%
   distinct(Date, dec_tag, antennaName, movement, .keep_all = TRUE)
@@ -144,3 +180,160 @@ plot_ly() %>%
          yaxis = list(title = primaryYaxisName, side = "left", showgrid = FALSE),
          yaxis2 = list(title = SecondaryYaxisName, side = "right", overlaying = "y",
                        showgrid = FALSE))
+
+
+# Study Area Proportion Notes ---------------------------------------------
+
+
+#how many fish are in the study area vs not on avery given day
+#start with releasedTags
+####find how many fish at a given time are inside/outside sutdy area
+detectionData <- detectionsAttributesFlows
+statusDf <- getMovementsFunction(detectionsAttributesFlows)
+studyStartDate <- min(date(detections$detected))
+
+#gets all tags, especially ones not detected yet with antennas
+allTagsStatusDf <- statusDf %>%
+  right_join(Unc_Tag_Releases1[,c("Full Tag", "Release Date")], by = c("newTag" = "Full Tag"))
+#for tags not detected yet on antennas, we assume they're still within the study area
+#this will change if a tag is detected first on the downstream antenna; will get caught in the "preStudyStatus" column
+allTagsStatusDf2 <- allTagsStatusDf %>%
+  mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), "Inside study area", `Study Area Status`), 
+         StatusDate = if_else(!is.na(DetectionDate), DetectionDate, studyStartDate)
+         #StatusDate = coalesce(DetectionDate, `Release Date.y`)
+  ) #%>%
+#st_drop_geometry()
+# now complete dailyt status for each tag
+#can do with Data.table 
+# library(data.table)
+# setDT(x1)
+# 
+# # This performs the sequence generation for each tag individually
+# df_completed <- x1[, .(day = seq(studyStartDate, max(x1$StatusDate), by = "day")), 
+#                    by = newTag]
+# detach("package:data.table", unload=TRUE)
+allTagsStatusDfCompleted <- allTagsStatusDf2 %>%
+  #group_by(newTag) %>%
+  #ungroup() %>%
+  #arrange(StatusDate) %>%
+  #first arg is group so group by new tag, then next arg is column you have to fill in. Must be present in data
+  tidyr::complete(newTag, StatusDate = seq.Date(
+    from = min(StatusDate),
+    to   = max(x1$StatusDate),
+    by   = "day"
+  )
+  )
+
+#fill in missing values
+
+allTagsStatusDfFilled <- allTagsStatusDfCompleted %>%
+  group_by(newTag) %>%
+  arrange(StatusDate) %>%
+  #ensures that missing values get changed 
+  tidyr::fill(`Study Area Status`, .direction = "down") %>%
+  tidyr::fill(preStudyStatus, .direction = "up") %>%
+  #for the sutdy area that didn't have a previous one to fill down, it's at the beginning of the study so use values from "preStudyStatus" 
+  #IF IT WAS OUTSIDE THE STUDY AREA AND CAME BACK IN ITS FIRST DETECTION WILL BE THE DOWNSTREAM ARRAY
+  #ie tag 989.001040499618
+  #replace_na might be cleaner and faster but this is more descriptive
+  mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), preStudyStatus, `Study Area Status`)) %>%
+  ungroup()
+
+newProportionCounts <- allTagsStatusDfFilled %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) #%>%
+#summarize(n = n())
+#should add up to the total number of unique rows in release file bc based off newTag
+totals <- proportionCounts %>%
+  group_by(DetectionDate) %>%
+  summarise(total = sum(n))
+oldProportionCounts <- proportionCounts
+
+y1 <- x3 %>%
+  filter(preStudyStatus == "Outside study area", 
+         StatusDate != as.Date("2025-11-11")) %>%
+  distinct(newTag, .keep_all = TRUE)
+# uniqueTags <- x3 %>%
+#   distinct(newTag) %>%
+#   count(newTag) %>%
+#   mutate(nDigits = str_length(newTag))
+
+#tag that 989.001040500063
+x4 <- x3 %>%
+  filter(is.na(`Study Area Status`))
+
+
+#####filering troubelshooting
+detectionData1 <- combinedDetectionAndStatusData$detectionsAttributesFlows
+input <- list(
+  slider2 = c(min(detectionData1$DetectionDate -1), max(detectionData1$DetectionDate +1)), 
+  picker10 = unique(detectionData1$SPP), 
+  arrayPicker = unique(detectionData1$antennaName),
+  picker7 = unique(detectionData1$antenna), 
+  slider10 = c(min(as.numeric(detectionData1$`TL 1st Enc. (mm)`), na.rm = TRUE), max(detectionData1$`TL 1st Enc. (mm)`, na.rm = TRUE)), 
+  
+)
+dateColumnToFilter <- "StatusDate"
+dailyStatus1 <- combinedDetectionAndStatusData$dailyStatus
+detectionDatafiltered <- dailyStatus1  %>% 
+  filter(
+    .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
+    # antennaName %in% c(input$arrayPicker),
+    # antenna %in% c(input$picker7),
+    SPP %in% c(input$picker10),
+    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+    
+  ) %>%
+  arrange(detected)
+####detection data 
+dateColumnToFilter <- "DetectionDate"
+alldetectionDatafiltered <- combinedDetectionAndStatusData$detectionsAttributesFlows  %>% 
+  filter(
+    .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2],
+    antennaName %in% c(input$arrayPicker),
+    antenna %in% c(input$picker7),
+    SPP %in% c(input$picker10),
+    `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2]
+    
+  ) %>%
+  arrange(detected)
+
+difs <- anti_join(dailyStatus1, `statusDataInAPp_2026-01-05`)
+difsAlfilters <- anti_join(dailyStatus1, `statusData2_2026-01-05`)
+difsstatusnew <- anti_join(dailyStatus1, `statusData3_2026-01-05`)
+
+x <- dailyStatus1 %>%
+  filter(is.na(`antenna`))
+
+###trobeshooting a buit
+dailyStatus1 <- combinedDetectionAndStatusData$dailyStatus
+x1 <- dailyStatus1 %>%
+  
+  count(preStudyStatus)
+x <- dailyStatus1 %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) 
+
+x2 <- dailyStatus1 %>%
+  distinct(.keep_all = TRUE) %>%
+  filter(StatusDate == "2025-11-11" ) %>% #& StatusDate <= "2025-11-12" 
+  count(newTag)
+
+###########
+detectionCountDataToDisplay <- combinedDetectionAndStatusData$dailyStatus %>%
+  count(DetectionDate = StatusDate, `Antenna or Status` = `Study Area Status`) %>%
+  group_by(DetectionDate) %>%
+  mutate(Dailypercent = round(n / sum(n) * 100, 2))
+
+detectionCountDataToDisplay$`Antenna or Status` <- 
+  factor(detectionCountDataToDisplay$`Antenna or Status`,
+         levels = unique(detectionCountDataToDisplay$`Antenna or Status`))
+
+allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status` <- 
+  factor(allDataFiltered()$detectionCountDataToDisplay$`Antenna or Status`,
+         levels = statusOptions)
+dateOptions <- unique(combinedDetectionAndStatusData$dailyStatus$`Release Date`)
+x <- alldetectionDatafiltered %>%
+  filter(`Release Date` %in% c(dateOptions))
+
+x <- detectionCountDataToDisplay[,c("DetectionDate" =="2025-11-11")]
+detectionCountDataToDisplay$n[detectionCountDataToDisplay$DetectionDate == "2025-11-11"
+                              & detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"]
