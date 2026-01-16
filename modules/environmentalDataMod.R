@@ -343,7 +343,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         )
       })
       
-      downloadData_Server("downloadCountsDataTable", allDataFiltered()$detectionCountDataToDisplay, "countsData")
+      downloadData_Server("downloadCountsDataTable", reactive({allDataFiltered()$detectionCountDataToDisplay}), "countsData")
       
       output$allDataTable <- renderDT({
         
@@ -360,7 +360,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         )
       })
       
-      downloadData_Server("downloadAllDataTable", allDataFiltered()$allDataToDisplay, "AllData")
+      downloadData_Server("downloadAllDataTable", reactive({allDataFiltered()$allDataToDisplay}), "AllData")
       
     }
   )

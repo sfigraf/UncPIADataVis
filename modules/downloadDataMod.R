@@ -46,26 +46,31 @@ downloadData_Server <- function(id, data, fileName = "UncDataDownload") {
           size = "s"
           
         ))
+        #prevents modal from popping up again on re-render bc once it's been clicked once, input$downloadActionButton > 0 so it will re-initialize and show unless this is set to false
       }, ignoreInit = TRUE)
       
       output$downloadCSV <- downloadHandler(
         filename = function() {
-          paste(fileName, "_", Sys.Date(), ".csv", sep = "")
+          filenameReactive <- if (shiny::is.reactive(fileName)) fileName() else fileName
+          paste(filenameReactive, "_", Sys.Date(), ".csv", sep = "")
         },
         content = function(file) {
           on.exit(removeModal())
+          #grabs the current version of that data with this call using ()
+          data <- if(is.reactive(data)) data() else data
           write_csv(data, file, progress = TRUE)
-          
         }
       )
       
-      
       output$downloadRDS <- downloadHandler(
         filename = function() {
-          paste(fileName, "_", Sys.Date(), ".rds", sep = "")
+          filenameReactive <- if (shiny::is.reactive(fileName)) fileName() else fileName
+          paste(filenameReactive, "_", Sys.Date(), ".rds", sep = "")
         },
         content = function(file) {
           on.exit(removeModal())
+          #grabs the current version of that data with this call using ()
+          data <- if(is.reactive(data)) data() else data
           saveRDS(data, file = file)
         }
       )
