@@ -21,15 +21,24 @@ for (i in neededFunctions) {
 
 antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
 #detections_20251216 <- read_csv("data/detections_20251216.csv")
-detections <- read_excel("data/detections_20251216.xlsx", 
-                         col_types = c("text", "text", "date", 
-              "numeric", "text", "numeric"))
-Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
-                               col_types = c("date", "text", "numeric", 
-                                             "text", "numeric", "numeric", "numeric", 
-                                             "numeric", "numeric", "numeric", 
-                                             "numeric", "numeric", "numeric", 
-                                             "numeric"))
+detections <- read_csv("data/detections_20251216.csv", 
+    col_types = cols(dec_tag = col_character(), 
+                     antenna = col_character(),
+        detected = col_character()))
+detections <- detections %>%
+  mutate(detected = ymd_hms(detected))
+
+# detectionsexcel <- read_excel("data/detections_20251216.xlsx",
+#                          col_types = c("text", "text", "date",
+#               "numeric", "text", "numeric"))
+Unc_Tag_Releases <- read_csv("data/Unc Tag Releases.csv", 
+                                           col_types = cols(`Full Tag` = col_character()))
+# Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
+#                                col_types = c("date", "text", "numeric", 
+#                                              "text", "numeric", "numeric", "numeric", 
+#                                              "numeric", "numeric", "numeric", 
+#                                              "numeric", "numeric", "numeric", 
+#                                              "numeric"))
 
 antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
 antennasSF <- antennasSFAll %>%
