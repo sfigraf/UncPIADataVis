@@ -337,3 +337,89 @@ x <- alldetectionDatafiltered %>%
 x <- detectionCountDataToDisplay[,c("DetectionDate" =="2025-11-11")]
 detectionCountDataToDisplay$n[detectionCountDataToDisplay$DetectionDate == "2025-11-11"
                               & detectionCountDataToDisplay$`Antenna or Status` == "Outside study area"]
+
+
+#################
+Paco_PIT_Tags_11_07_2023_Final_Zs_Unit <- read_excel("Paco_PIT Tags_11_07_2023 Final Zs Unit.xlsx")
+x <- Paco_PIT_Tags_11_07_2023_Final_Zs_Unit %>%
+  mutate(length = str_length(`DEC Tag ID`))
+
+Unc_Tag_Releases_for_Sam_1_ <- read_excel("Unc Tag Releases for Sam (1).xlsx")
+Unc_Tag_Releases_for_Sam_1_Counts <- Unc_Tag_Releases_for_Sam_1_ %>%
+  rename(dec_tag = `Full Tag`) %>%
+  distinct(dec_tag) %>%
+  count(str_length(dec_tag))
+
+Unc_Tag_Releases_for_Sam_1_csv <- read_csv("Unc Tag Releases for Sam (1) csv.csv", 
+                                           col_types = cols(`Full Tag` = col_character()))
+
+Unc_Tag_Releases_for_Sam_1_CSVCounts <- Unc_Tag_Releases_for_Sam_1_csv %>%
+  rename(dec_tag = `Full Tag`) %>%
+  distinct(dec_tag) %>%
+  count(str_length(dec_tag))
+
+detections <- read_excel("data/detections_20251216.xlsx", 
+                         col_types = c("text", "text", "date", 
+                                       "numeric", "text", "numeric"))
+
+UncTagData <- read_csv("UncTagData.csv")
+#CORRECT WAY
+UncTagDataCharacterTag <- read_csv("UncTagData.csv", 
+                       col_types = cols(dec_tag = col_character()))
+
+UncTagDataCharacterTagcounts <- UncTagDataCharacterTag %>%
+  distinct(dec_tag) %>%
+  count(str_length(dec_tag))
+
+detections_20251216 <- read_csv("detections_20251216.csv", 
+                                col_types = cols(dec_tag = col_character()))
+detections_20251216TagCounts <- detections_20251216 %>%
+  distinct(dec_tag) %>%
+  count(str_length(dec_tag))
+
+csvUniqueTags <- UncTagData %>%
+  distinct(dec_tag) %>%
+  filter(str_length(dec_tag) == 15)
+  count(str_length(dec_tag))
+  write_csv(csvUniqueTags, "text.csv")
+
+UncTagData1 <- UncTagData %>%
+  filter(str_length(dec_tag) == 15) %>%
+  distinct(dec_tag, .keep_all = TRUE)
+UncTagDatax <- UncTagData %>%
+  mutate(length = str_length(dec_tag)) %>%
+  count(length)
+#less digits
+UncTagDataExcel <- read_excel("UncTagData.xlsx", 
+                              col_types = c("text", "text", "date", 
+                                            "numeric", "text", "numeric"))
+UncTagDataExcel_x <- UncTagDataExcel %>%
+  distinct(dec_tag) %>%
+  mutate(length = str_length(dec_tag)) %>%
+  count(length)
+#18 digits
+UncTagDataExcel2 <- read_excel("UncTagData more digits.xlsx", 
+                              col_types = c("text", "text", "date", 
+                                            "numeric", "text", "numeric"))
+UncTagDataExcel2_1 <- UncTagDataExcel2 %>%
+  #filter(str_length(dec_tag) == 18) %>%
+  distinct(dec_tag, .keep_all = TRUE) %>%
+  count(str_length(dec_tag))
+  #mutate(last2 = str_sub(dec_tag, 17, 18))
+
+countsLast2 <- UncTagDataExcel2_1 %>%
+  count(last2)
+
+
+UncTagDataExcel_x2 <- UncTagDataExcel2 %>%
+  mutate(length = str_length(dec_tag)) %>%
+  distinct(dec_tag, .keep_all = TRUE)
+  count(length)
+
+UncTagDataExcel_x <- UncTagDataExcel %>%
+  mutate(length = str_length(dec_tag)) %>%
+  count(length)
+
+detectionsX <- detections %>%
+  mutate(length = str_length(dec_tag)) %>%
+  count(length)
