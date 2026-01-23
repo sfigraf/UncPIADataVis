@@ -423,3 +423,7 @@ UncTagDataExcel_x <- UncTagDataExcel %>%
 detectionsX <- detections %>%
   mutate(length = str_length(dec_tag)) %>%
   count(length)
+# new release file qaqc
+uncReleasesMARKFile_JanNew <- read_csv("data/Unc Tag Releases trout only jan new.csv")
+x <- uncReleasesMARKFile_JanNew %>%
+  count(`/*Tag#`)

@@ -33,6 +33,7 @@ detections <- detections %>%
 #               "numeric", "text", "numeric"))
 Unc_Tag_Releases <- read_csv("data/Unc Tag Releases.csv", 
                                            col_types = cols(`Full Tag` = col_character()))
+
 # Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
 #                                col_types = c("date", "text", "numeric", 
 #                                              "text", "numeric", "numeric", "numeric", 
