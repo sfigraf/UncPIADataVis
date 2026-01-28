@@ -21,8 +21,8 @@ environmentalData_UI <- function(id, combinedDetectionAndStatusData) {
                    ),
                    pickerInput(ns("picker10"),
                                label = "Species Type",
-                               choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$SPP)),
-                               selected = unique(combinedDetectionAndStatusData$dailyStatus$SPP),
+                               choices = sort(unique(combinedDetectionAndStatusData$dailyStatus$Species)),
+                               selected = unique(combinedDetectionAndStatusData$dailyStatus$Species),
                                multiple = TRUE,
                                options = list(
                                  `actions-box` = TRUE #this makes the "select/deselect all" option
@@ -132,7 +132,7 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         detectionDatafiltered <- detectionDatafiltered %>%
           filter(
             .data[[dateColumnToFilter]] >= input$slider2[1] & .data[[dateColumnToFilter]] <= input$slider2[2], 
-            SPP %in% c(input$picker10),
+            Species %in% c(input$picker10),
             `TL 1st Enc. (mm)` >= input$slider10[1] & `TL 1st Enc. (mm)` <= input$slider10[2], 
             #have to use as.character for the picker. use slider maybe otherwise idk
             as.character(`Release Date`) %in% input$releaseDatePicker

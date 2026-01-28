@@ -427,3 +427,8 @@ detectionsX <- detections %>%
 uncReleasesMARKFile_JanNew <- read_csv("data/Unc Tag Releases trout only jan new.csv")
 x <- uncReleasesMARKFile_JanNew %>%
   count(`/*Tag#`)
+
+##making new mark file into old-looking one
+oldreleasefile <- read_csv("data/Unc Tag Releases.csv", 
+                           col_types = cols(`Full Tag` = col_character()))
+Unc_Tag_Releases1

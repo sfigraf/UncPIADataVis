@@ -31,8 +31,9 @@ detections <- detections %>%
 # detectionsexcel <- read_excel("data/detections_20251216.xlsx",
 #                          col_types = c("text", "text", "date",
 #               "numeric", "text", "numeric"))
-Unc_Tag_Releases <- read_csv("data/Unc Tag Releases.csv", 
-                                           col_types = cols(`Full Tag` = col_character()))
+Unc_Tag_Releases <- read_csv("data/Unc Tag Release File Feb26.csv", 
+    col_types = cols(`Dec Tag #` = col_character()))
+
 
 # Unc_Tag_Releases <- read_excel("data/Unc Tag Releases.xlsx", 
 #                                col_types = c("date", "text", "numeric", 
@@ -54,21 +55,23 @@ studyStartDate <- min(date(detections$detected))
 USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
 
 ###Data Wrangling
-
+#gets rid of redundant columns and rows
 Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
-  select(`Release Date` = Date, SPP, `TL 1st Enc. (mm)`, `Full Tag`)
+  select(`Release Date` = `Date 1st Enc`, Species, `TL 1st Enc. (mm)` = `TL 1st Enc`, `Dec Tag #`) %>%
+  filter(!is.na(`Dec Tag #`))
+  #select(`Release Date` = Date, Species, `TL 1st Enc. (mm)`, `Dec Tag #`)
 
 detections1 <- detections %>%
   mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
 detectionsAttributesFlows <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
-  left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+  left_join(Unc_Tag_Releases1, by = c("newTag" = "Dec Tag #")) %>%
   mutate(DetectionDate = date(detected)) %>%
   left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
   #st_as_sf()
 
-dailyStatus <- getStatusFunction(detectionsAttributesFlows)
+dailyStatus <- getStatusFunction(detectionsAttributesFlows, studyStartDate = studyStartDate)
 
 combinedDetectionAndStatusData <- list(
   "detectionsAttributesFlows" = detectionsAttributesFlows,
@@ -76,14 +79,23 @@ combinedDetectionAndStatusData <- list(
 )
 
 #####QAQC
+#qaqc to make sure tag numbers brought in correctly; should all be length 16 (3 digits and decimal +12 digits proceeding)
+UncTagDataCharacterTagcounts <- Unc_Tag_Releases %>%
+  distinct(`Dec Tag #`) %>%
+  count(str_length(`Dec Tag #`))
+
+detectionsTagCounts <- detections %>%
+  distinct(dec_tag) %>%
+  count(str_length(dec_tag))
+#files currently displayed in app
 morethan1dec_tag <- detectionsAttributesFlows %>%
   distinct(dec_tag, newTag) %>%
   count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
   filter(`Number of dec_tag Entries` > 1)
 
 moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
-  count(`Full Tag`, name = "Number of 'Full Tag' Entries") %>%
-  filter(`Number of 'Full Tag' Entries` > 1)
+  count(`Dec Tag #`, name = "Number of Tag Entries") %>%
+  filter(`Number of Tag Entries` > 1)
 
 detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
   filter(is.na(`Release Date`))
