@@ -14,11 +14,14 @@ getStatusFunction <- function(detectionData, studyStartDate) {
   # see all isntances here 
   # removedRows <- detectionData %>%
   #   anti_join(detectionDataDistinct)
+  
   detectionsFIrstLast <- detectionDataDistinct %>%
     group_by(dec_tag, DetectionDate) %>%
     arrange(detected) %>%
-    mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
-                                  detected == max(detected) ~ "Last_of_day",
+    #we want to prioritize last_ofDay so put that first. if there's a single array hit that day this way it will register "last of day"
+    #example 989.002028177009
+    mutate(first_last = case_when(detected == max(detected) ~ "Last_of_day",
+                                  detected == min(detected) ~ "First_of_day",
                                   detected != min(detected) & detected != max(detected) ~ "0")) %>%
     ungroup()
   
@@ -40,7 +43,7 @@ getStatusFunction <- function(detectionData, studyStartDate) {
       # long = st_coordinates(detectionsSF)[row_number(),1], 
       # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
-  #find first detection after release
+  #find first detection after release to get pre study status
   #MAYBE CHANGE TO JOIN ON NEWTAG ONCE RELEASE DATA IS CLEANER
   preStudyTagStatus <- dailyMovementsTableAll %>%
     group_by(dec_tag) %>%
@@ -48,7 +51,6 @@ getStatusFunction <- function(detectionData, studyStartDate) {
     #if the fish has no previous antenna assigned and the first detection is donwstream array or cow creek, then it was outside the study area before the start of the study
     mutate(preStudyStatus = if_else(is.na(lag(antennaName)) & (str_detect(antennaName, c("Downstream")) | str_detect(antennaName, c("Cow Creek Antenna"))), "Outside study area", "Inside study area")) %>%
     filter(detected == first(detected))
-  
   
   
   ###For "movements" we're looking at poplation levels of whether or not a fish in the the study area or not at the last detection of the day
