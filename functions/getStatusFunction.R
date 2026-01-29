@@ -44,7 +44,6 @@ getStatusFunction <- function(detectionData, studyStartDate) {
       # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
   #find first detection after release to get pre study status
-  #MAYBE CHANGE TO JOIN ON NEWTAG ONCE RELEASE DATA IS CLEANER
   preStudyTagStatus <- dailyMovementsTableAll %>%
     group_by(dec_tag) %>%
     arrange(detected) %>%
@@ -68,7 +67,7 @@ getStatusFunction <- function(detectionData, studyStartDate) {
   
   #gets all tags, especially ones not detected yet with antennas
   allTagsStatusDf <- statusLastOfDay %>%
-    right_join(Unc_Tag_Releases1[,c("Dec Tag #")], by = c("newTag" = "Dec Tag #"))
+    right_join(Unc_Tag_Releases1[,c("Dec Tag #")], by = c("dec_tag" = "Dec Tag #"))
   #for tags not detected yet on antennas, we assume they're still within the study area
   #this will change if a tag is detected first on the downstream antenna; will get caught in the "preStudyStatus" column
   
@@ -85,7 +84,7 @@ getStatusFunction <- function(detectionData, studyStartDate) {
     #ungroup() %>%
     #arrange(StatusDate) %>%
     #first arg is group so group by new tag, then next arg is column you have to fill in. Must be present in data
-    tidyr::complete(newTag, StatusDate = seq.Date(
+    tidyr::complete(dec_tag, StatusDate = seq.Date(
       from = min(StatusDate),
       to   = max(StatusDate),
       by   = "day"
@@ -94,7 +93,7 @@ getStatusFunction <- function(detectionData, studyStartDate) {
   #fill in missing values
   
   allTagsStatusDfFilled <- allTagsStatusDfCompleted %>%
-    group_by(newTag) %>%
+    group_by(dec_tag) %>%
     arrange(StatusDate) %>%
     #ensures that missing values get changed 
     tidyr::fill(`Study Area Status`, .direction = "down") %>%
@@ -111,7 +110,7 @@ getStatusFunction <- function(detectionData, studyStartDate) {
   #join back with release file to get all attribute info relevant for filtering
   #shouldn't get a warning message when all duplicate tag entries are sorted out
   allTagsStatusDfFilledAttributes <- allTagsStatusDfFilled %>%
-    left_join(Unc_Tag_Releases1, by = c("newTag" = "Dec Tag #")) %>%
+    left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Dec Tag #")) %>%
     left_join(USGSFlows$USGSDataDaily, by = c("StatusDate" = "Date"))
   
   allTagsStatusDfFilledAttributesCleaned <- allTagsStatusDfFilledAttributes %>%

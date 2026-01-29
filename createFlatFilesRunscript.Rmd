@@ -27,10 +27,16 @@ detections <- read_csv("data/detections_20251216.csv",
                      antenna = col_character(),
                      detected = col_character()))
 detections <- detections %>%
-  mutate(detected = ymd_hms(detected))
+  mutate(detected = ymd_hms(detected)) %>%
+  add_row(`dec_tag` = "989.101030620161", 
+          detected = as_datetime("2025-11-11 00:02:53"), 
+          antenna = "02")
 
 Unc_Tag_Releases <- read_csv("data/Unc Tag Release File Feb26.csv", 
-    col_types = cols(`Dec Tag #` = col_character()))
+                             col_types = cols(`Dec Tag #` = col_character()))  %>%
+  add_row(`Dec Tag #` = "989.00103062016133") %>%
+  add_row(`Dec Tag #` = "989.001030620161") %>%
+  add_row(`Dec Tag #` = "989.101030620161")
 
 antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
 antennasSF <- antennasSFAll %>%
@@ -42,22 +48,21 @@ antennasSF <- antennasSFAll %>%
 ```{r USGS, include=FALSE, echo=FALSE}
 studyStartDate <- min(date(detections$detected))
 
-USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected)), waterTemp = FALSE)
+USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detections$detected), na.rm = TRUE), waterTemp = FALSE)
 
 ###Data Wrangling
 #gets rid of redundant columns and rows
 Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
   select(`Release Date` = `Date 1st Enc`, Species, `TL 1st Enc. (mm)` = `TL 1st Enc`, `Dec Tag #`) %>%
-  filter(!is.na(`Dec Tag #`)) %>%
-  add_row(`Dec Tag #` = "989.001030620161")
+  filter(!is.na(`Dec Tag #`))
   #select(`Release Date` = Date, Species, `TL 1st Enc. (mm)`, `Dec Tag #`)
 
-detections1 <- detections %>%
-  mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
+detections1 <- detections #%>%
+  #mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
 detectionsAttributesFlows <- detections1 %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
-  left_join(Unc_Tag_Releases1, by = c("newTag" = "Dec Tag #")) %>%
+  left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Dec Tag #")) %>%
   mutate(DetectionDate = date(detected)) %>%
   left_join(USGSFlows$USGSDataDaily, by = c("DetectionDate" = "Date"))
   #st_as_sf()
@@ -88,10 +93,10 @@ detectionsTagCounts <- detections %>%
 detectionsTagCountsFlagged <- detectionsTagCounts %>%
   filter(`String Length of all Detected Tag Entries` != 16)
 #files currently displayed in app
-morethan1dec_tag <- detectionsAttributesFlows %>%
-  distinct(dec_tag, newTag) %>%
-  count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
-  filter(`Number of dec_tag Entries` > 1)
+# morethan1dec_tag <- detectionsAttributesFlows %>%
+#   distinct(dec_tag, newTag) %>%
+#   count(`Release File tag entry` = newTag, name = "Number of dec_tag Entries") %>%
+#   filter(`Number of dec_tag Entries` > 1)
 
 moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
   count(`Dec Tag #`, name = "Number of Tag Entries") %>%
@@ -146,7 +151,7 @@ if(nrow(detectionsWithoutReleaseData) > 0){
   detectionsWithoutReleaseDataDatatable <- NULL
 }
 
-qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
+qaqcData <- list(#"morethan1dec_tag" = morethan1dec_tag, 
                  "moreThan1ReleaseEntry" = moreThan1ReleaseEntry, 
                  "detectionsWithoutReleaseData" = detectionsWithoutReleaseData)
 ```
