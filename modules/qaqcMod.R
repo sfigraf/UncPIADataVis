@@ -2,9 +2,9 @@ QAQC_UI <- function(id) {
   ns <- NS(id)
   tagList(
     tabsetPanel(
-      tabPanel("Released Tags with >1 dec_tag Detection", 
-               DTOutput(ns("excessReleaseTable"))
-               ), 
+      # tabPanel("Released Tags with >1 dec_tag Detection", 
+      #          DTOutput(ns("excessReleaseTable"))
+      #          ), 
       tabPanel("Tags with >1 Entry in Release File", 
                DTOutput(ns("morethan1ReleaseTable"))
       ), 
@@ -27,13 +27,13 @@ QAQC_Server <- function(id, qaqcData) {
   moduleServer(
     id,
     function(input, output, session) {
-      output$excessReleaseTable <- renderDT({
-        datatable(qaqcData$morethan1dec_tag,
-                  rownames = FALSE,
-                  caption = c("Tags in Release File that have more than 1 unique tag detection of dec_tag from Biomark data. In other words, 
-                  most urgent to address tags that are missing digits since they have detections.")
-        )
-      })
+      # output$excessReleaseTable <- renderDT({
+      #   datatable(qaqcData$morethan1dec_tag,
+      #             rownames = FALSE,
+      #             caption = c("Tags in Release File that have more than 1 unique tag detection of dec_tag from Biomark data. In other words, 
+      #             most urgent to address tags that are missing digits since they have detections.")
+      #   )
+      # })
       
       output$morethan1ReleaseTable <- renderDT({
         datatable(qaqcData$moreThan1ReleaseEntry,
@@ -44,7 +44,7 @@ QAQC_Server <- function(id, qaqcData) {
       
       output$unknownTags <- renderDT({
         uniqueUnknowntags <- qaqcData$detectionsWithoutReleaseData %>%
-          distinct(newTag)
+          distinct(dec_tag)
         
         datatable(uniqueUnknowntags,
                   rownames = FALSE,

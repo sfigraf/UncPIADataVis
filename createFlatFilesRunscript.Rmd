@@ -27,16 +27,16 @@ detections <- read_csv("data/detections_20251216.csv",
                      antenna = col_character(),
                      detected = col_character()))
 detections <- detections %>%
-  mutate(detected = ymd_hms(detected)) %>%
-  add_row(`dec_tag` = "989.101030620161", 
-          detected = as_datetime("2025-11-11 00:02:53"), 
-          antenna = "02")
+  mutate(detected = ymd_hms(detected)) #%>%
+  # add_row(`dec_tag` = "989.101030620161", 
+  #         detected = as_datetime("2025-11-11 00:02:53"), 
+  #         antenna = "02")
 
 Unc_Tag_Releases <- read_csv("data/Unc Tag Release File Feb26.csv", 
-                             col_types = cols(`Dec Tag #` = col_character()))  %>%
-  add_row(`Dec Tag #` = "989.00103062016133") %>%
-  add_row(`Dec Tag #` = "989.001030620161") %>%
-  add_row(`Dec Tag #` = "989.101030620161")
+                             col_types = cols(`Dec Tag #` = col_character())) # %>%
+  # add_row(`Dec Tag #` = "989.00103062016133") %>%
+  # add_row(`Dec Tag #` = "989.001030620161") %>%
+  # add_row(`Dec Tag #` = "989.101030620161")
 
 antennasSFAll <- st_as_sf(antennaMetadata, coords = c("long", "lat"), crs = 4326) 
 antennasSF <- antennasSFAll %>%
@@ -55,11 +55,8 @@ USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detection
 Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
   select(`Release Date` = `Date 1st Enc`, Species, `TL 1st Enc. (mm)` = `TL 1st Enc`, `Dec Tag #`) %>%
   filter(!is.na(`Dec Tag #`))
-  #select(`Release Date` = Date, Species, `TL 1st Enc. (mm)`, `Dec Tag #`)
 
-detections1 <- detections #%>%
-  #mutate(newTag = if_else(str_length(dec_tag) == 18, substr(dec_tag, 1, nchar(dec_tag) - 2), dec_tag))
-detectionsAttributesFlows <- detections1 %>%
+detectionsAttributesFlows <- detections %>%
   left_join(antennasSFAll, by = c("antenna" = "antennaNumber"
   )) %>%
   left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Dec Tag #")) %>%

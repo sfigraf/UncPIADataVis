@@ -109,11 +109,11 @@ environmentalData_Server <- function(id, USGSData, combinedDetectionAndStatusDat
         if(input$textinput3 != ''){
           
           validate(
-            need(input$textinput3 %in% detectionData$newTag, "Tag value not found in newTag column.Try removing last 2 digits of tag.")
+            need(input$textinput3 %in% detectionData$dec_tag, "Tag value not found in newTag column.Try removing last 2 digits of tag.")
           )
           
           detectionDatafiltered <- detectionData %>%
-            filter(newTag %in% trimws(input$textinput3)
+            filter(dec_tag %in% trimws(input$textinput3)
             ) %>%
             arrange(detected)
           
