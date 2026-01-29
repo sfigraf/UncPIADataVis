@@ -12,6 +12,7 @@ library(tidyverse)
 library(dataRetrieval)
 library(readxl)
 library(sf)
+library(DT) #for tables in QAQC runscript
 
 neededFunctions <- c("getDailyand15MinUSGSData.R", "getStatusFunction.R")
 
@@ -24,7 +25,7 @@ antennaMetadata <- read_excel("data/antennaMetadata.xlsx")
 detections <- read_csv("data/detections_20251216.csv", 
     col_types = cols(dec_tag = col_character(), 
                      antenna = col_character(),
-        detected = col_character()))
+                     detected = col_character()))
 detections <- detections %>%
   mutate(detected = ymd_hms(detected))
 
@@ -47,7 +48,8 @@ USGSFlows <- getDailyand15MinUSGSData("09147025", startDate = min(date(detection
 #gets rid of redundant columns and rows
 Unc_Tag_Releases1 <- Unc_Tag_Releases %>%
   select(`Release Date` = `Date 1st Enc`, Species, `TL 1st Enc. (mm)` = `TL 1st Enc`, `Dec Tag #`) %>%
-  filter(!is.na(`Dec Tag #`))
+  filter(!is.na(`Dec Tag #`)) %>%
+  add_row(`Dec Tag #` = "989.001030620161")
   #select(`Release Date` = Date, Species, `TL 1st Enc. (mm)`, `Dec Tag #`)
 
 detections1 <- detections %>%
@@ -67,15 +69,24 @@ combinedDetectionAndStatusData <- list(
   "dailyStatus" = dailyStatus
 )
 
+
+```
+
+```{r qaqc messaging, echo=FALSE, include=FALSE}
+###if something different than 16 is displayed, printhte tables
 #####QAQC
 #qaqc to make sure tag numbers brought in correctly; should all be length 16 (3 digits and decimal +12 digits proceeding)
 UncTagDataCharacterTagcounts <- Unc_Tag_Releases %>%
   distinct(`Dec Tag #`) %>%
-  count(str_length(`Dec Tag #`))
+  count(`String Length of Released Tag Entries` = str_length(`Dec Tag #`), name = "Count") 
+UncTagDataCharacterTagcountsFlagged <- UncTagDataCharacterTagcounts %>%
+  filter(`String Length of Released Tag Entries` != 16)
 
 detectionsTagCounts <- detections %>%
   distinct(dec_tag) %>%
-  count(str_length(dec_tag))
+  count(`String Length of all Detected Tag Entries` = str_length(dec_tag), name = "Count") 
+detectionsTagCountsFlagged <- detectionsTagCounts %>%
+  filter(`String Length of all Detected Tag Entries` != 16)
 #files currently displayed in app
 morethan1dec_tag <- detectionsAttributesFlows %>%
   distinct(dec_tag, newTag) %>%
@@ -89,12 +100,68 @@ moreThan1ReleaseEntry <- Unc_Tag_Releases1 %>%
 detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
   filter(is.na(`Release Date`))
 
+##flag data and display if anything is out of the ordinary
+if(nrow(UncTagDataCharacterTagcountsFlagged) > 0){
+  problemReleaseTagsLengthMessage <- paste("Tags in the Release Data are not the correct format. Length of all Dec Tag entries shoult be 16: 3 digits before decimal, 12 subsequent digits.")
+  problemReleaseDatatable <-  datatable(UncTagDataCharacterTagcounts, 
+            rownames = FALSE,
+            caption = "String Lengths of Tags Release Data (should be 16)"
+            )
+} else{
+  problemReleaseTagsLengthMessage <- ""
+  problemReleaseDatatable <- NULL
+}
+
+if(nrow(detectionsTagCountsFlagged) > 0){
+  problemDetectionTagsLengthMessage <- paste("Tags in the Detection Data are not the correct format. Length of all Dec Tag entries shoult be 16: 3 digits before decimal, 12 subsequent digits.")
+  problemDetectionDatatable <- datatable(detectionsTagCounts, 
+            rownames = FALSE,
+            caption = "String Lengths of Tags in Detection Data (should be 16)"
+            )
+} else {
+  problemDetectionTagsLengthMessage <- ""
+  problemDetectionDatatable <- NULL
+}
+# more than one release data tag entry
+if(nrow(moreThan1ReleaseEntry) > 0){
+  moreThan1ReleaseEntryMessage <- paste("There are tags with duplicate entries in the release file.")
+  moreThan1ReleaseEntryDatatable <- datatable(moreThan1ReleaseEntry, 
+            rownames = FALSE,
+            caption = "Tags in release file that have more than 1 entry in the release file."
+            )
+} else {
+  moreThan1ReleaseEntryMessage <- ""
+  moreThan1ReleaseEntryDatatable <- NULL
+}
+
+# more than one dec tag entry in combined data
+if(nrow(detectionsWithoutReleaseData) > 0){
+  detectionsWithoutReleaseDataMessage <- paste("There are detected tags without release data.")
+  detectionsWithoutReleaseDataDatatable <- datatable(detectionsWithoutReleaseData, 
+            rownames = FALSE,
+            caption = "Detected tags without release data."
+            )
+} else {
+  detectionsWithoutReleaseDataMessage <- ""
+  detectionsWithoutReleaseDataDatatable <- NULL
+}
+
 qaqcData <- list("morethan1dec_tag" = morethan1dec_tag, 
                  "moreThan1ReleaseEntry" = moreThan1ReleaseEntry, 
                  "detectionsWithoutReleaseData" = detectionsWithoutReleaseData)
 ```
 
+<span style="color:red; font-size: 30px;" >`r problemReleaseTagsLengthMessage`</span>
+`r problemReleaseDatatable`
 
+<span style="color:red; font-size: 30px;" >`r problemDetectionTagsLengthMessage`</span>
+`r problemDetectionDatatable`
+
+<span style="color:red; font-size: 30px;" >`r moreThan1ReleaseEntryMessage`</span>
+`r moreThan1ReleaseEntryDatatable`
+
+<span style="color:red; font-size: 30px;" >`r detectionsWithoutReleaseDataMessage`</span>
+`r detectionsWithoutReleaseDataDatatable`
 ```{r savingFiles, echo=FALSE, include=TRUE}
 allFlatFiles <- list(
   "combinedDetectionAndStatusData" = combinedDetectionAndStatusData, 
