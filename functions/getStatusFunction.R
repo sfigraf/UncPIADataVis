@@ -2,7 +2,7 @@
 #funciton gets the "Status" of a fish based off the last array they ended the day on
 #as of 1/5 2025 it's applied to all data and the static file is used in the app
 
-getStatusFunction <- function(detectionData) {
+getStatusFunction <- function(detectionData, studyStartDate) {
   
   #remove duplicate detection rows: most tags don't have this but one tag (12/29/2025) was detected same timestamp on dif antennas 
   #throws off first/last if timestamps were both first or last of the day
@@ -14,11 +14,14 @@ getStatusFunction <- function(detectionData) {
   # see all isntances here 
   # removedRows <- detectionData %>%
   #   anti_join(detectionDataDistinct)
+  
   detectionsFIrstLast <- detectionDataDistinct %>%
     group_by(dec_tag, DetectionDate) %>%
     arrange(detected) %>%
-    mutate(first_last = case_when(detected == min(detected) ~ "First_of_day",
-                                  detected == max(detected) ~ "Last_of_day",
+    #we want to prioritize last_ofDay so put that first. if there's a single array hit that day this way it will register "last of day"
+    #example 989.002028177009
+    mutate(first_last = case_when(detected == max(detected) ~ "Last_of_day",
+                                  detected == min(detected) ~ "First_of_day",
                                   detected != min(detected) & detected != max(detected) ~ "0")) %>%
     ungroup()
   
@@ -40,15 +43,13 @@ getStatusFunction <- function(detectionData) {
       # long = st_coordinates(detectionsSF)[row_number(),1], 
       # lat = st_coordinates(detectionsSF)[row_number(),2]
     )
-  #find first detection after release
-  #MAYBE CHANGE TO JOIN ON NEWTAG ONCE RELEASE DATA IS CLEANER
+  #find first detection after release to get pre study status
   preStudyTagStatus <- dailyMovementsTableAll %>%
     group_by(dec_tag) %>%
     arrange(detected) %>%
     #if the fish has no previous antenna assigned and the first detection is donwstream array or cow creek, then it was outside the study area before the start of the study
     mutate(preStudyStatus = if_else(is.na(lag(antennaName)) & (str_detect(antennaName, c("Downstream")) | str_detect(antennaName, c("Cow Creek Antenna"))), "Outside study area", "Inside study area")) %>%
     filter(detected == first(detected))
-  
   
   
   ###For "movements" we're looking at poplation levels of whether or not a fish in the the study area or not at the last detection of the day
@@ -66,11 +67,12 @@ getStatusFunction <- function(detectionData) {
   
   #gets all tags, especially ones not detected yet with antennas
   allTagsStatusDf <- statusLastOfDay %>%
-    right_join(Unc_Tag_Releases1[,c("Full Tag")], by = c("newTag" = "Full Tag"))
+    right_join(Unc_Tag_Releases1[,c("Dec Tag #")], by = c("dec_tag" = "Dec Tag #"))
   #for tags not detected yet on antennas, we assume they're still within the study area
   #this will change if a tag is detected first on the downstream antenna; will get caught in the "preStudyStatus" column
   
   #also create "StatusDate" column based on filtered data and if a fish has already bene detected that day; will be used to make a sequence
+  #studyStartDate a global variable, should probbaly pass this to the function
   minDate <- if_else(min(date(allTagsStatusDf$detected), na.rm = TRUE) >= studyStartDate, min(date(allTagsStatusDf$detected), na.rm = TRUE), studyStartDate)
   allTagsStatusDf2 <- allTagsStatusDf %>%
     mutate(`Study Area Status` = if_else(is.na(`Study Area Status`), "Inside study area", `Study Area Status`), 
@@ -82,7 +84,7 @@ getStatusFunction <- function(detectionData) {
     #ungroup() %>%
     #arrange(StatusDate) %>%
     #first arg is group so group by new tag, then next arg is column you have to fill in. Must be present in data
-    tidyr::complete(newTag, StatusDate = seq.Date(
+    tidyr::complete(dec_tag, StatusDate = seq.Date(
       from = min(StatusDate),
       to   = max(StatusDate),
       by   = "day"
@@ -91,7 +93,7 @@ getStatusFunction <- function(detectionData) {
   #fill in missing values
   
   allTagsStatusDfFilled <- allTagsStatusDfCompleted %>%
-    group_by(newTag) %>%
+    group_by(dec_tag) %>%
     arrange(StatusDate) %>%
     #ensures that missing values get changed 
     tidyr::fill(`Study Area Status`, .direction = "down") %>%
@@ -108,13 +110,13 @@ getStatusFunction <- function(detectionData) {
   #join back with release file to get all attribute info relevant for filtering
   #shouldn't get a warning message when all duplicate tag entries are sorted out
   allTagsStatusDfFilledAttributes <- allTagsStatusDfFilled %>%
-    left_join(Unc_Tag_Releases1, by = c("newTag" = "Full Tag")) %>%
+    left_join(Unc_Tag_Releases1, by = c("dec_tag" = "Dec Tag #")) %>%
     left_join(USGSFlows$USGSDataDaily, by = c("StatusDate" = "Date"))
   
   allTagsStatusDfFilledAttributesCleaned <- allTagsStatusDfFilledAttributes %>%
     mutate(Flow = coalesce(Flow.x, Flow.y), 
            `TL 1st Enc. (mm)` = coalesce(`TL 1st Enc. (mm).x`, `TL 1st Enc. (mm).y`), 
-           SPP = coalesce(SPP.x, SPP.y), 
+           Species = coalesce(Species.x, Species.y), 
            `Release Date` = coalesce(`Release Date.x`, `Release Date.y`)) %>%
     select(StatusDate, names(detectionData), `preStudyStatus`, `Study Area Status`) %>%
     #get rid of unnecessary rows, which only occur in this function bc of duplicate tag entries (like the many-many join relationship). Once data is clean this shouldn;t be needed
