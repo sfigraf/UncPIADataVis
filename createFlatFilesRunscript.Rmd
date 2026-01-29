@@ -104,7 +104,7 @@ detectionsWithoutReleaseData <- detectionsAttributesFlows %>%
 
 ##flag data and display if anything is out of the ordinary
 if(nrow(UncTagDataCharacterTagcountsFlagged) > 0){
-  problemReleaseTagsLengthMessage <- paste("Tags in the Release Data are not the correct format. Length of all Dec Tag entries shoult be 16: 3 digits before decimal, 12 subsequent digits.")
+  problemReleaseTagsLengthMessage <- paste("Tags in the Release Data are not the correct format. Length of all Dec Tag entries should be 16: 3 digits before decimal, 12 subsequent digits.")
   problemReleaseDatatable <-  datatable(UncTagDataCharacterTagcounts, 
             rownames = FALSE,
             caption = "String Lengths of Tags Release Data (should be 16)"
@@ -138,7 +138,7 @@ if(nrow(moreThan1ReleaseEntry) > 0){
 
 # more than one dec tag entry in combined data
 if(nrow(detectionsWithoutReleaseData) > 0){
-  detectionsWithoutReleaseDataMessage <- paste("There are detected tags without release data.")
+  detectionsWithoutReleaseDataMessage <- paste("There are detected tags without release data from the release file.")
   detectionsWithoutReleaseDataDatatable <- datatable(detectionsWithoutReleaseData, 
             rownames = FALSE,
             caption = "Detected tags without release data."
